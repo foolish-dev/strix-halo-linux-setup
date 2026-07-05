@@ -88,7 +88,7 @@ class DashboardWindow(QWidget):
 
         self.setup_ui()
         self.apply_styles()
-    self.apply_backend_state()
+        self.apply_backend_state()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -626,7 +626,7 @@ class DashboardWindow(QWidget):
 
         self._update_profile_buttons()
         self._auto_btn.setChecked(self.power.is_auto_enabled())
-    self.apply_backend_state()
+        self.apply_backend_state()
 
 class CommandCenterApp(QSystemTrayIcon):
     def __init__(self, app):
