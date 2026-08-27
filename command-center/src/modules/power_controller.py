@@ -349,18 +349,68 @@ class PowerController:
         except Exception:
             return self._fallback_status()
 
+    @staticmethod
+    def _read_supply(sup, name):
+        try:
+            return (sup / name).read_text().strip()
+        except OSError:
+            return ""
+
+    def _find_system_battery(self):
+        """Return the machine's own battery, ignoring peripheral batteries.
+
+        The first entry of /sys/class/power_supply is not the system battery.
+        On the GZ302EA the detachable keyboard reports itself as a Battery with
+        capacity=0 and status=Unknown, and readdir order places it before BAT0 --
+        so taking the first hit shows a flat, always-plugged-in battery.
+        Peripheral packs are identified by scope=Device and/or present=0.
+        """
+        candidates = []
+        for sup in Path("/sys/class/power_supply").glob("*"):
+            if self._read_supply(sup, "type") != "Battery":
+                continue
+            if self._read_supply(sup, "scope") == "Device":
+                continue
+            if self._read_supply(sup, "present") == "0":
+                continue
+            if not (sup / "capacity").exists():
+                continue
+            candidates.append(sup)
+
+        if not candidates:
+            return None
+        # Prefer the conventional BAT* naming when several qualify.
+        candidates.sort(key=lambda s: (not s.name.upper().startswith("BAT"), s.name))
+        return candidates[0]
+
+    def _on_external_power(self):
+        """True when a mains supply reports online, None when none is present."""
+        for sup in Path("/sys/class/power_supply").glob("*"):
+            if self._read_supply(sup, "type") != "Mains":
+                continue
+            online = self._read_supply(sup, "online")
+            if online:
+                return online == "1"
+        return None
+
     def get_battery_info(self):
         try:
-            for sup in Path("/sys/class/power_supply").glob("*"):
-                if (sup / "status").exists():
-                    status = (sup / "status").read_text().strip().lower()
-                    if (sup / "capacity").exists():
-                        pct = int((sup / "capacity").read_text().strip())
-                        return {
-                            "percent": pct,
-                            "plugged": status != "discharging",
-                            "status": status,
-                        }
+            bat = self._find_system_battery()
+            if bat is not None:
+                status = self._read_supply(bat, "status").lower() or "unknown"
+                pct = int(self._read_supply(bat, "capacity") or 0)
+
+                # Prefer the mains supply for AC state: a battery status of
+                # "Full"/"Unknown"/"Not charging" says nothing about the adapter.
+                plugged = self._on_external_power()
+                if plugged is None:
+                    plugged = status not in ("discharging", "unknown")
+
+                return {
+                    "percent": pct,
+                    "plugged": plugged,
+                    "status": status,
+                }
         except Exception:
             pass
         return {"percent": None, "plugged": None, "status": "unknown"}

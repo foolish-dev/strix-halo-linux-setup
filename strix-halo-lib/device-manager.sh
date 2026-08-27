@@ -86,16 +86,26 @@ _cpu_model_read() {
     printf '%s\n' "$cpu_model"
 }
 
+# The libraries run with `set -o pipefail`, so `producer | grep -q` is unsafe as a
+# probe: `grep -q` exits on its first match, the producer dies of SIGPIPE, and the
+# pipeline reports 141 — turning a match into a miss. Capture the listing first and
+# match it with a here-string so no pipe exists to break.
 _lspci_has() {
-    lspci -nn 2>/dev/null | grep -Eiq "$1"
+    local listing
+    listing=$(lspci -nn 2>/dev/null) || return 1
+    grep -Eiq "$1" <<< "$listing"
 }
 
 _lsusb_has() {
-    lsusb 2>/dev/null | grep -Eiq "$1"
+    local listing
+    listing=$(lsusb 2>/dev/null) || return 1
+    grep -Eiq "$1" <<< "$listing"
 }
 
 _kernel_module_loaded() {
-    lsmod 2>/dev/null | grep -q "^${1}[[:space:]]"
+    local modules
+    modules=$(lsmod 2>/dev/null) || return 1
+    grep -q "^${1}[[:space:]]" <<< "$modules"
 }
 
 device_detect_strix_halo_platform() {
@@ -145,14 +155,40 @@ device_detect_mt7925() {
 
 # Detect Cirrus Logic CS35L41 smart amplifier
 device_detect_cs35l41() {
-    if aplay -l 2>/dev/null | grep -qi "cs35l41"; then
+    # On Strix Halo the amplifiers hang off I2C/SPI under the ACPI HID CSC3551,
+    # so they are bound as "...-cs35l41-hda.N" devices. This is the only probe
+    # that sees them: they never reach the PCI bus, and the HDA card advertises
+    # its codec (e.g. ALC294) rather than the amplifiers, so neither `lspci` nor
+    # `aplay -l` nor the ALSA card id ever mentions cs35l41.
+    local bus_match
+    bus_match=$(find /sys/bus/i2c/devices /sys/bus/spi/devices -maxdepth 1 \
+        -iname "*cs35l41*" -o -iname "*CSC3551*" 2>/dev/null) || bus_match=""
+    if [[ -n "$bus_match" ]]; then
         CAP_CS35L41="true"
         return 0
     fi
-    if find /sys/class/sound/ -name "card*" -exec cat {}/id \; 2>/dev/null | grep -qi "cs35l41"; then
+
+    local modules
+    modules=$(lsmod 2>/dev/null) || modules=""
+    if grep -q "cs35l41" <<< "$modules"; then
         CAP_CS35L41="true"
         return 0
     fi
+
+    local playback_devices
+    playback_devices=$(aplay -l 2>/dev/null) || playback_devices=""
+    if grep -qi "cs35l41" <<< "$playback_devices"; then
+        CAP_CS35L41="true"
+        return 0
+    fi
+
+    local card_ids
+    card_ids=$(find /sys/class/sound/ -name "card*" -exec cat {}/id \; 2>/dev/null) || card_ids=""
+    if grep -qi "cs35l41" <<< "$card_ids"; then
+        CAP_CS35L41="true"
+        return 0
+    fi
+
     if _lspci_has "Cirrus Logic" || _lspci_has "CS35L41"; then
         CAP_CS35L41="true"
         return 0

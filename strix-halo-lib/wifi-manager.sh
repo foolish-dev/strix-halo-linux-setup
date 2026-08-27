@@ -29,11 +29,12 @@ set -euo pipefail
 # Returns: 0 if found, 1 if not found
 # Output: PCI device information if found
 wifi_detect_hardware() {
-    local pci_id="14c3:0616"  # MediaTek MT7925e PCI ID
-    
-    # Get device info once to avoid duplicate lspci calls
+    # Match on the adapter name as well as the PCI IDs. 14c3:0616/0617 are MT7922
+    # parts; the MT7925 in the GZ302EA enumerates as 14c3:7925, so keying on a
+    # single hardcoded ID misses the very adapter this library exists to configure.
+    # (Plain grep, not grep -q: it drains stdin, so it is safe under pipefail.)
     local device_info
-    device_info=$(lspci -nn 2>/dev/null | grep "$pci_id")
+    device_info=$(lspci -nn 2>/dev/null | grep -Ei 'MT7925|14c3:(7925|0616|0617)')
     
     if [[ -n "$device_info" ]]; then
         echo "$device_info"
@@ -46,17 +47,26 @@ wifi_detect_hardware() {
 # Check if mt7925e kernel module is loaded
 # Returns: 0 if loaded, 1 if not loaded
 wifi_module_loaded() {
-    lsmod | grep -q "^mt7925e"
+    # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
+    local modules
+    modules=$(lsmod 2>/dev/null) || return 1
+    grep -q "^mt7925e" <<< "$modules"
 }
 
 # Get current WiFi firmware version
 # Returns: Firmware version string or "unknown"
 wifi_get_firmware_version() {
+    # The MT7925 firmware does not ship as a single mt7925e.bin. Current
+    # linux-firmware installs it under mediatek/mt7925/ as WIFI_RAM_CODE_MT7925*
+    # (optionally zstd-compressed), so probing only for mt7925e.bin reports
+    # "unknown" on a machine whose firmware is present and loaded.
     local fw_path="/lib/firmware/mediatek"
-    if [[ -f "$fw_path/mt7925e.bin" ]]; then
-        # Try to extract version from dmesg (driver loads firmware)
-        local fw_ver
-        fw_ver=$(dmesg | grep -i "mt7925e.*firmware" | tail -1 | grep -oP 'version.*' || echo "present")
+    if compgen -G "${fw_path}/mt7925/WIFI_RAM_CODE_MT7925*" >/dev/null 2>&1 \
+       || [[ -f "${fw_path}/mt7925e.bin" ]]; then
+        local kernel_log fw_ver
+        kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
+        fw_ver=$(grep -i "mt7925.*firmware" <<< "$kernel_log" | tail -1 | grep -oP 'version.*') || fw_ver="present"
+        [[ -n "$fw_ver" ]] || fw_ver="present"
         echo "$fw_ver"
         return 0
     else
@@ -144,7 +154,7 @@ wifi_get_state() {
         powersave_disabled="true"
     fi
     
-    firmware=$(wifi_get_firmware_version)
+    firmware=$(wifi_get_firmware_version) || firmware="unknown"
     
     if wifi_requires_aspm_workaround; then
         requires_workaround="true"
@@ -303,13 +313,17 @@ wifi_verify_working() {
     fi
     
     # Check for kernel errors
-    if dmesg | tail -100 | grep -qi "mt7925.*error\|mt7925.*fail"; then
+    local wifi_log
+    wifi_log=$(dmesg 2>/dev/null | tail -100) || wifi_log=""
+    if grep -qi "mt7925.*error\|mt7925.*fail" <<< "$wifi_log"; then
         echo "WARNING: Recent WiFi errors in kernel log"
         status=1
     fi
     
     # Check WiFi interface exists
-    if ! ip link show | grep -q "wl"; then
+    local link_list
+    link_list=$(ip link show 2>/dev/null) || link_list=""
+    if ! grep -q "wl" <<< "$link_list"; then
         echo "WARNING: No wireless interface found"
         status=1
     fi

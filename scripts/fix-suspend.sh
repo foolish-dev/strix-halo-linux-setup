@@ -89,8 +89,27 @@ case "$1" in
         # 2. Disable non-essential xHCI wakeup sources
         # ---------------------------------------------------------------
         # On Strix Halo, multiple xHCI controllers can race during s2idle
-        # resume. Keep only the controller hosting the internal keyboard
-        # (c4:00.4) wakeup-enabled; disable the rest.
+        # resume. Keep the controller hosting the internal keyboard
+        # wakeup-enabled; disable the rest.
+        #
+        # The controller must be discovered, not hardcoded: on the GZ302EA the
+        # internal ASUS keyboard (0b05:1a30) sits on c6:00.0, while c4:00.4 hosts
+        # only the webcam. Pinning the keep-set to a literal BDF disables wakeup on
+        # exactly the controller that needs it, so a keypress no longer resumes.
+        keep_xhci=""
+        for usbdev in /sys/bus/usb/devices/*; do
+            [[ -f "$usbdev/idVendor" ]] || continue
+            [[ "$(<"$usbdev/idVendor")" == "0b05" ]] || continue
+            pci_parent=$(readlink -f "$usbdev" 2>/dev/null \
+                | grep -oE '0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9]' | tail -1) || pci_parent=""
+            [[ -n "$pci_parent" ]] && keep_xhci="${keep_xhci} ${pci_parent}"
+        done
+        if [[ -n "$keep_xhci" ]]; then
+            log "Keeping xHCI wakeup on:${keep_xhci}"
+        else
+            log "No internal ASUS USB device found; leaving xHCI wakeup untouched"
+        fi
+
         log "Constraining xHCI wakeup sources..."
         : > "$STATE_DIR/xhc-wakeup"
         for dev in /sys/bus/pci/devices/*; do
@@ -99,8 +118,11 @@ case "$1" in
             # 0x0c0330 = xHCI USB controller
             if [[ "$local_class" == "0x0c0330" ]]; then
                 dev_name=$(basename "$dev")
-                # Keep wakeup on the internal USB controller (keyboard lives here)
-                [[ "$dev_name" == *"c4:00.4"* ]] && continue
+                # Keep wakeup on whichever controller carries the internal keyboard.
+                # If discovery found nothing, keep every controller rather than
+                # risking a machine that cannot be woken from the keyboard.
+                [[ -z "$keep_xhci" ]] && continue
+                [[ " ${keep_xhci} " == *" ${dev_name} "* ]] && continue
                 if [[ -f "$dev/power/wakeup" ]]; then
                     current=$(<"$dev/power/wakeup")
                     if [[ "$current" == "enabled" ]]; then
@@ -278,8 +300,25 @@ fi
 
 if [[ -n "$SUGGEST_PARAMS" ]]; then
     echo -e "$SUGGEST_PARAMS"
-    echo "To add these on CachyOS/Arch, edit /etc/default/grub or your"
-    echo "bootloader config, then regenerate (e.g., sudo grub-mkconfig -o /boot/grub/grub.cfg)"
+    # Name the bootloader that is actually installed. CachyOS defaults to Limine,
+    # so unconditional GRUB instructions send the user to edit a file that does
+    # not exist and to run a command that is not installed.
+    if [[ -d /boot/loader ]] && [[ -f /boot/loader/loader.conf ]]; then
+        echo "To add these: edit the 'options' line of your entry in"
+        echo "/boot/loader/entries/*.conf (systemd-boot), then reboot."
+    elif [[ -f /boot/grub/grub.cfg ]] || [[ -f /boot/grub2/grub.cfg ]] || [[ -f /etc/default/grub ]]; then
+        echo "To add these: edit GRUB_CMDLINE_LINUX_DEFAULT in /etc/default/grub,"
+        echo "then run: sudo grub-mkconfig -o /boot/grub/grub.cfg"
+    elif [[ -f /etc/default/limine ]]; then
+        echo "To add these: append them to KERNEL_CMDLINE[default] in"
+        echo "/etc/default/limine, then run: sudo limine-update"
+    elif [[ -f /etc/kernel/cmdline ]]; then
+        echo "To add these: edit /etc/kernel/cmdline, then rebuild your UKI"
+        echo "(e.g. sudo mkinitcpio -P)."
+    else
+        echo "To add these: append them to your bootloader's kernel command line"
+        echo "and regenerate its configuration."
+    fi
 else
     echo "  All recommended parameters already present."
 fi

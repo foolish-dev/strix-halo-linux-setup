@@ -67,6 +67,14 @@ done
 ICON_NAME="strix-halo-power-manager"
 ICON_SRC="$APP_DIR/assets/profile-b.svg"
 
+# The assets/ directory is not always present in an installed copy. Emitting
+# Icon=strix-halo-power-manager when nothing installs that file leaves every
+# launcher entry with an unresolvable icon, so fall back to a stock theme name.
+if [[ ! -f "$ICON_SRC" ]]; then
+  echo "NOTE: $ICON_SRC not found — falling back to a stock theme icon"
+  ICON_NAME="preferences-system-power"
+fi
+
 # Try to install icon to system-wide location if running as root
 if [[ ${EUID:-$(id -u)} -eq 0 ]] && [[ -f "$ICON_SRC" ]]; then
   # Install to hicolor icon theme (most widely supported)

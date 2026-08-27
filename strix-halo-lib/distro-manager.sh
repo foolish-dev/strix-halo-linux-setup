@@ -92,6 +92,24 @@ distro_configure_amd_pstate() {
     local param="amd_pstate=guided"
     local found_any=false
 
+    # Do not downgrade a working amd-pstate-epp setup.
+    # On Strix Halo the kernel default is status=active / driver=amd-pstate-epp,
+    # which exposes energy_performance_preference and is what power-profiles-daemon
+    # drives. Booting with amd_pstate=guided registers the plain amd-pstate driver
+    # instead, removing the EPP knob that the desktop power profiles depend on.
+    # Only steer the mode when the machine is not already in the better one.
+    local pstate_status="" scaling_driver=""
+    [[ -r /sys/devices/system/cpu/amd_pstate/status ]] && \
+        pstate_status=$(cat /sys/devices/system/cpu/amd_pstate/status 2>/dev/null)
+    [[ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver ]] && \
+        scaling_driver=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver 2>/dev/null)
+
+    if [[ "$pstate_status" == "active" || "$scaling_driver" == "amd-pstate-epp" ]]; then
+        info "amd-pstate already active (driver: ${scaling_driver:-unknown}) — leaving it alone"
+        info "  active/EPP mode is preferred here; not adding ${param}"
+        return 0
+    fi
+
     # --- GRUB ---
     if [[ -f /etc/default/grub ]]; then
         found_any=true
@@ -259,10 +277,40 @@ distro_provide_optimization_info() {
         info "✓ AMD P-State driver enhancements built-in"
         info ""
         info "Additional Optimizations Available:"
-        info "1. Consider using 'amd_pstate=active' for better battery life:"
-        info "   - Edit /etc/default/grub and change amd_pstate=guided to amd_pstate=active"
-        info "   - Run: grub-mkconfig -o /boot/grub/grub.cfg"
-        info "   - Active mode lets hardware autonomously choose optimal frequencies"
+
+        local live_pstate="" live_driver="" bootloader=""
+        [[ -r /sys/devices/system/cpu/amd_pstate/status ]] && \
+            live_pstate=$(cat /sys/devices/system/cpu/amd_pstate/status 2>/dev/null)
+        [[ -r /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver ]] && \
+            live_driver=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver 2>/dev/null)
+        if declare -f detect_bootloader >/dev/null 2>&1; then
+            bootloader=$(detect_bootloader)
+        fi
+
+        info "1. amd-pstate mode (currently: ${live_pstate:-unknown}, driver: ${live_driver:-unknown}):"
+        if [[ "$live_pstate" == "active" ]]; then
+            info "   - Already in active/EPP mode, which is the recommended setting here."
+            info "   - Active mode lets hardware autonomously choose optimal frequencies"
+        else
+            info "   - Consider 'amd_pstate=active' for better battery life"
+            case "$bootloader" in
+                limine)
+                    info "   - Edit KERNEL_CMDLINE[default] in /etc/default/limine"
+                    info "   - Run: sudo limine-update"
+                    ;;
+                grub)
+                    info "   - Edit /etc/default/grub and set amd_pstate=active"
+                    info "   - Run: sudo grub-mkconfig -o /boot/grub/grub.cfg"
+                    ;;
+                systemd-boot)
+                    info "   - Edit the 'options' line in /boot/loader/entries/*.conf"
+                    ;;
+                *)
+                    info "   - Add amd_pstate=active to your bootloader's kernel command line"
+                    ;;
+            esac
+            info "   - Active mode lets hardware autonomously choose optimal frequencies"
+        fi
         info ""
         info "2. Use CachyOS kernel manager to select optimized kernel:"
         info "   - linux-cachyos-bore (recommended for gaming/desktop)"

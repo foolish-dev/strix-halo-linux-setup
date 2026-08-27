@@ -224,7 +224,9 @@ display_vrr_supported() {
     done
     
     # Check for AMD GPU with VRR
-    if lsmod 2>/dev/null | grep -q "^amdgpu"; then
+    local modules
+    modules=$(lsmod 2>/dev/null) || modules=""
+    if grep -q "^amdgpu" <<< "$modules"; then
         return 0  # Assume VRR capable if AMD GPU
     fi
     
@@ -494,10 +496,14 @@ display_print_status() {
     
     echo ""
     echo "Available Tools:"
-    display_is_x11 && command -v xrandr >/dev/null && echo "  ✓ xrandr (X11)"
-    display_has_wlr_randr && echo "  ✓ wlr-randr (Wayland)"
-    display_has_gdctl && echo "  ✓ gdctl (GNOME >= 48, X11/Wayland)"
-    display_has_kscreen && echo "  ✓ kscreen-doctor (KDE)"
+    if display_is_x11 && command -v xrandr >/dev/null; then echo "  ✓ xrandr (X11)"; fi
+    if display_has_wlr_randr; then echo "  ✓ wlr-randr (Wayland)"; fi
+    if display_has_gdctl; then echo "  ✓ gdctl (GNOME >= 48, X11/Wayland)"; fi
+    if display_has_kscreen; then echo "  ✓ kscreen-doctor (KDE)"; fi
+
+    # Absent optional tools must not become this function's exit status: callers
+    # such as the generated rrcfg wrapper run under `set -e`.
+    return 0
 }
 
 # List all profiles with details

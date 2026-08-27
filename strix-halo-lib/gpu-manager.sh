@@ -31,9 +31,9 @@ set -euo pipefail
 gpu_detect_hardware() {
     # Radeon 8060S is integrated - check for Strix Halo device
     # PCI ID may vary, look for AMD/ATI device
-    if lspci | grep -qi "VGA.*AMD\|Display.*AMD"; then
-        local gpu_info
-        gpu_info=$(lspci | grep -i "VGA.*AMD\|Display.*AMD")
+    local pci_list gpu_info
+    pci_list=$(lspci 2>/dev/null) || pci_list=""
+    if gpu_info=$(grep -i "VGA.*AMD\|Display.*AMD" <<< "$pci_list"); then
         echo "$gpu_info"
         return 0
     else
@@ -53,10 +53,41 @@ gpu_get_device_id() {
     fi
 }
 
+# Resolve the DRM card bound to amdgpu.
+# The index is not stable and must not be assumed to be 0: on the ROG Flow Z13
+# (GZ302EA) the HD-Audio controller claims card0 and the Radeon 8060S comes up as
+# card1, so /sys/class/drm/card0 does not exist at all.
+# Returns: the card name (e.g. "card1"), or 1 if no amdgpu-bound card is found.
+gpu_get_drm_card() {
+    local card name driver
+    for card in /sys/class/drm/card*; do
+        name=$(basename "$card")
+        [[ "$name" =~ ^card[0-9]+$ ]] || continue
+        [[ -e "$card/device/driver" ]] || continue
+        driver=$(basename "$(readlink -f "$card/device/driver")" 2>/dev/null) || continue
+        if [[ "$driver" == "amdgpu" ]]; then
+            printf '%s\n' "$name"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Resolve the debugfs DRM index for the amdgpu card (the numeric part of the card
+# name, which matches the DRM minor used under /sys/kernel/debug/dri/).
+gpu_get_drm_index() {
+    local card
+    card=$(gpu_get_drm_card) || return 1
+    printf '%s\n' "${card#card}"
+}
+
 # Check if amdgpu kernel module is loaded
 # Returns: 0 if loaded, 1 if not loaded
 gpu_module_loaded() {
-    lsmod | grep -q "^amdgpu"
+    # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
+    local modules
+    modules=$(lsmod 2>/dev/null) || return 1
+    grep -q "^amdgpu" <<< "$modules"
 }
 
 # Get GPU firmware directory
@@ -93,14 +124,21 @@ gpu_verify_firmware() {
     local gc_ver="11_5_1"
     
     # Try to detect actual GC version from dmesg or debugfs
-    if dmesg | grep -q "gc_11_5_2"; then
+    local kernel_log
+    kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
+    if grep -q "gc_11_5_2" <<< "$kernel_log"; then
         gc_ver="11_5_2"
-    elif dmesg | grep -q "gc_12_0_1"; then
+    elif grep -q "gc_12_0_1" <<< "$kernel_log"; then
         gc_ver="12_0_1"
-    elif [[ -f /sys/kernel/debug/dri/0/amdgpu_firmware_info ]]; then
-        local detected
-        detected=$(grep -oP "gc_\d+_\d+_\d+" /sys/kernel/debug/dri/0/amdgpu_firmware_info | head -1 | sed 's/gc_//')
-        [[ -n "$detected" ]] && gc_ver="$detected"
+    else
+        local drm_index fw_info
+        drm_index=$(gpu_get_drm_index) || drm_index=""
+        fw_info="/sys/kernel/debug/dri/${drm_index:-0}/amdgpu_firmware_info"
+        if [[ -f "$fw_info" ]]; then
+            local detected
+            detected=$(grep -oP "gc_\d+_\d+_\d+" "$fw_info" | head -1 | sed 's/gc_//')
+            [[ -n "$detected" ]] && gc_ver="$detected"
+        fi
     fi
 
     echo "GPU Firmware Verification (GC $gc_ver):"
@@ -452,13 +490,15 @@ gpu_verify_working() {
     fi
     
     # Check for kernel errors
-    if dmesg | tail -200 | grep -qi "amdgpu.*error\|amdgpu.*fail"; then
+    local gpu_log
+    gpu_log=$(dmesg 2>/dev/null | tail -200) || gpu_log=""
+    if grep -qi "amdgpu.*error\|amdgpu.*fail" <<< "$gpu_log"; then
         echo "WARNING: Recent GPU errors in kernel log"
         status=1
     fi
     
-    # Check DRM device exists
-    if [[ ! -d /sys/class/drm/card0 ]]; then
+    # Check DRM device exists (the amdgpu card, whatever index it landed on)
+    if ! gpu_get_drm_card >/dev/null; then
         echo "WARNING: DRM device not found"
         status=1
     fi

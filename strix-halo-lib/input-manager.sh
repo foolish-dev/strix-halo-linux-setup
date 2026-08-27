@@ -29,9 +29,9 @@ set -euo pipefail
 # Returns: 0 if found, 1 if not found
 # Output: Device information if found
 input_detect_hid_devices() {
-    if lsusb | grep -qi "0b05.*asus\|asus.*keyboard"; then
-        local device_info
-        device_info=$(lsusb | grep -i "0b05.*asus\|asus.*keyboard")
+    local usb_list device_info
+    usb_list=$(lsusb 2>/dev/null) || usb_list=""
+    if device_info=$(grep -i "0b05.*asus\|asus.*keyboard" <<< "$usb_list"); then
         echo "$device_info"
         return 0
     else
@@ -44,14 +44,18 @@ input_detect_hid_devices() {
 input_touchpad_detected() {
     # Check for i2c-hid touchpad
     if [[ -d /sys/bus/i2c/devices ]]; then
-        if find /sys/bus/i2c/devices -name "*ELAN*" -o -name "*touchpad*" 2>/dev/null | grep -q .; then
+        local i2c_matches
+        i2c_matches=$(find /sys/bus/i2c/devices -name "*ELAN*" -o -name "*touchpad*" 2>/dev/null) || i2c_matches=""
+        if [[ -n "$i2c_matches" ]]; then
             return 0
         fi
     fi
     
     # Check via libinput
     if command -v libinput >/dev/null 2>&1; then
-        if libinput list-devices 2>/dev/null | grep -qi "touchpad"; then
+        local libinput_devices
+        libinput_devices=$(libinput list-devices 2>/dev/null) || libinput_devices=""
+        if grep -qi "touchpad" <<< "$libinput_devices"; then
             return 0
         fi
     fi
@@ -75,28 +79,61 @@ input_keyboard_detected() {
 # Check if hid_asus kernel module is loaded
 # Returns: 0 if loaded, 1 if not loaded
 input_hid_asus_loaded() {
-    lsmod | grep -q "^hid_asus"
+    # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
+    local modules
+    modules=$(lsmod 2>/dev/null) || return 1
+    grep -q "^hid_asus" <<< "$modules"
 }
 
 # --- Tablet Mode Detection ---
 
 # Check if tablet mode switch is available
 # Returns: 0 if available, 1 if not
+# Check whether any input device advertises SW_TABLET_MODE.
+# SW_TABLET_MODE is bit 1 of an input device's SW capability bitmask, which the
+# kernel reports as hex in /proc/bus/input/devices ("B: SW=..."). It is a kernel
+# constant rather than a string stored anywhere under /sys, so grepping sysfs for
+# the literal name can never match. On the GZ302 the switch is carried by the
+# "Asus WMI hotkeys" device, which reports SW=2.
+_input_sw_tablet_mode_present() {
+    [[ -r /proc/bus/input/devices ]] || return 2
+
+    local line mask
+    while IFS= read -r line; do
+        mask=${line##*=}
+        mask=${mask##* }
+        [[ -n "$mask" ]] || continue
+        if (( 0x${mask} & (1 << 1) )); then
+            return 0
+        fi
+    done < <(grep '^B: SW=' /proc/bus/input/devices 2>/dev/null)
+
+    return 1
+}
+
 input_tablet_mode_switch_available() {
-    # Kernel 6.17+ has asus-wmi tablet mode support
-    if [[ -f /proc/acpi/button/lid/LID0/state ]] || \
-       find /sys/devices -name "input*" -type d -print0 2>/dev/null | xargs -0 grep -l "SW_TABLET_MODE" 2>/dev/null | grep -q .; then
-        return 0
-    else
-        return 1
-    fi
+    local rc=0
+    _input_sw_tablet_mode_present || rc=$?
+
+    case "$rc" in
+        0) return 0 ;;
+        1) return 1 ;;
+    esac
+
+    # /proc/bus/input/devices unavailable — fall back to the ACPI lid button.
+    # The directory is firmware-named (LID, LID0, ...), so it must be globbed.
+    local lid_state
+    for lid_state in /proc/acpi/button/lid/*/state; do
+        [[ -f "$lid_state" ]] && return 0
+    done
+    return 1
 }
 
 # Get current tablet mode state
 # Returns: "docked", "tablet", or "unknown"
 input_get_tablet_mode() {
     # Try asus-wmi first (kernel 6.17+)
-    if find /sys/devices -name "input*" -type d -print0 2>/dev/null | xargs -0 grep -l "SW_TABLET_MODE" 2>/dev/null | grep -q .; then
+    if _input_sw_tablet_mode_present; then
         # Parse tablet mode switch state
         # This is a simplified check - real implementation would parse evdev
         echo "available"

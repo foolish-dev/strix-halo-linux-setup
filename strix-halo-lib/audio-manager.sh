@@ -30,9 +30,9 @@ set -euo pipefail
 # Returns: 0 if found, 1 if not found
 # Output: Audio controller information
 audio_detect_controller() {
-    if lspci | grep -qi "audio.*amd\|audio.*advanced micro"; then
-        local audio_info
-        audio_info=$(lspci | grep -i "audio.*amd\|audio.*advanced micro")
+    local pci_list audio_info
+    pci_list=$(lspci 2>/dev/null) || pci_list=""
+    if audio_info=$(grep -i "audio.*amd\|audio.*advanced micro" <<< "$pci_list"); then
         echo "$audio_info"
         return 0
     else
@@ -48,8 +48,18 @@ audio_detect_cs35l41() {
         return 0
     fi
     
+    # Check loaded modules: on Strix Halo the amps are I2C/SPI attached, so they
+    # appear as snd_hda_scodec_cs35l41* modules rather than in lspci or aplay -l.
+    local modules
+    modules=$(lsmod 2>/dev/null) || modules=""
+    if grep -q "cs35l41" <<< "$modules"; then
+        return 0
+    fi
+
     # Check dmesg for CS35L41 driver messages
-    if dmesg | grep -qi "cs35l41"; then
+    local kernel_log
+    kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
+    if grep -qi "cs35l41" <<< "$kernel_log"; then
         return 0
     fi
     
@@ -59,27 +69,44 @@ audio_detect_cs35l41() {
 # Get audio subsystem ID
 # Returns: Subsystem ID or "unknown"
 audio_get_subsystem_id() {
-    # GZ302 should have subsystem ID 1043:1fb3
-    local subsystem_id
-    subsystem_id=$(lspci -vnn | grep -i audio -A 10 | grep -i "subsystem" | grep -oP '[\da-f]{4}:[\da-f]{4}' | head -1)
-    
-    if [[ -n "$subsystem_id" ]]; then
-        echo "$subsystem_id"
-    else
+    # GZ302 should have subsystem ID 1043:1fb3.
+    # Enumerate the audio-class functions (0403) rather than opening a -A 10 window
+    # at the first line that merely contains "audio": on Strix Halo the HDMI/DP
+    # audio function comes first and reports the generic AMD subsystem 1002:1640,
+    # so taking head -1 hides the board's real ASUS subsystem and makes
+    # audio_print_status warn about genuine ROG hardware.
+    local subsystems board_id
+    subsystems=$(lspci -vnn -d ::0403 2>/dev/null | grep -i "subsystem" | grep -oP '[\da-f]{4}:[\da-f]{4}') || subsystems=""
+
+    if [[ -z "$subsystems" ]]; then
         echo "unknown"
+        return 0
+    fi
+
+    # Prefer a board-vendor subsystem over the generic AMD (1002:) one.
+    board_id=$(grep -v '^1002:' <<< "$subsystems" | head -1) || board_id=""
+    if [[ -n "$board_id" ]]; then
+        echo "$board_id"
+    else
+        head -1 <<< "$subsystems"
     fi
 }
 
 # Check if snd_hda_intel module is loaded
 # Returns: 0 if loaded, 1 if not
 audio_module_loaded() {
-    lsmod | grep -q "^snd_hda_intel"
+    # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
+    local modules
+    modules=$(lsmod 2>/dev/null) || return 1
+    grep -q "^snd_hda_intel" <<< "$modules"
 }
 
 # Check if SOF is being used
 # Returns: 0 if SOF active, 1 if not
 audio_sof_active() {
-    if lsmod | grep -q "^snd_sof"; then
+    local modules
+    modules=$(lsmod 2>/dev/null) || modules=""
+    if grep -q "^snd_sof" <<< "$modules"; then
         return 0
     fi
     
@@ -395,7 +422,9 @@ audio_verify_working() {
     fi
     
     # Check for kernel errors
-    if dmesg | tail -200 | grep -qi "snd.*error\|audio.*fail\|cs35l41.*error"; then
+    local audio_log
+    audio_log=$(dmesg 2>/dev/null | tail -200) || audio_log=""
+    if grep -qi "snd.*error\|audio.*fail\|cs35l41.*error" <<< "$audio_log"; then
         echo "WARNING: Recent audio errors in kernel log"
         status=1
     fi

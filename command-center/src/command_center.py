@@ -861,7 +861,16 @@ class CommandCenterApp(QSystemTrayIcon):
         else:
             icon_name = "battery" if self.power.is_auto_enabled() and not self.power.get_battery_info().get("plugged") else "ac"
         if self.power.available and not self.power.is_auto_enabled():
-            icon_name = {"quiet": "profile-b", "balanced": "profile-b", "performance": "profile-p", "gaming": "profile-g"}.get(self.power.current_profile, "profile-b")
+            icon_name = {
+            "emergency": "profile-e",
+            "battery": "profile-e",
+            "efficient": "profile-f",
+            "quiet": "profile-b",
+            "balanced": "profile-b",
+            "performance": "profile-p",
+            "gaming": "profile-g",
+            "maximum": "profile-m",
+        }.get(self.power.current_profile, "profile-b")
 
         icon_path = assets / f"{icon_name}.svg"
         if QSvgRenderer is not None and icon_path.exists():

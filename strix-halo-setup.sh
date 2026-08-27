@@ -116,7 +116,7 @@ EOF
 done
 
 # --- GitHub base URL ---
-GITHUB_RAW_URL="https://raw.githubusercontent.com/th3cavalry/GZ302-Linux-Setup/main"
+GITHUB_RAW_URL="https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main"
 
 # --- Version (read once at startup) ---
 SETUP_VERSION="6.8.0"
@@ -821,7 +821,10 @@ install_tray_app() {
     # Install Python dependencies (including SVG support for tray icons)
     case "$distro" in
         arch)
-            pacman -S --noconfirm --needed python-pyqt6 python-psutil python-dbus 2>/dev/null || true
+            # qt6-svg provides libQt6Svg.so.6, which PyQt6.QtSvg needs to render the
+            # tray icons. The deb/rpm branches already pull an equivalent package;
+            # without it every SVG icon silently degrades to a painted letter circle.
+            pacman -S --noconfirm --needed python-pyqt6 qt6-svg python-psutil python-dbus 2>/dev/null || true
             ;;
         debian|ubuntu)
             apt install -y python3-pyqt6 python3-pyqt6.qtsvg python3-psutil python3-dbus 2>/dev/null || true
@@ -875,7 +878,7 @@ install_gaming_module() {
     info "Gaming packages: Steam, Lutris, MangoHUD, GameMode, Wine, Proton-GE"
     echo
 
-    download_and_execute_module "gz302-gaming" "$distro"
+    download_and_execute_module "gaming" "$distro"
 }
 
 # ==============================================================================
@@ -897,7 +900,7 @@ install_ai_module() {
     fi
     echo
 
-    download_and_execute_module "gz302-llm" "$distro"
+    download_and_execute_module "llm" "$distro"
 }
 
 # ==============================================================================
@@ -911,7 +914,7 @@ install_other_tools() {
     distro=$(detect_distribution)
 
     if prompt_section "Install Hypervisor? (KVM/QEMU, libvirt, virt-manager)" N; then
-        download_and_execute_module "gz302-hypervisor" "$distro"
+        download_and_execute_module "hypervisor" "$distro"
     fi
 
     echo
