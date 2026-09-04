@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 Input Manager Library
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This library manages ASUS HID devices (keyboard, touchpad) and tablet mode
 # functionality for the GZ302.
@@ -12,7 +12,8 @@ set -euo pipefail
 # Key Features:
 # - HID hardware detection
 # - Touchpad configuration
-# - Keyboard configuration (fnlock, RGB, remapping of "<COPILOT>" key to "<SHIFT>+<INS>")
+# - Keyboard configuration (fnlock, RGB, remapping of the "<COPILOT>" key
+#   (HID usage 0x070072) to "<INS>")
 # - Tablet mode detection and handling
 # - Kernel-aware workaround application
 #
@@ -42,13 +43,20 @@ input_detect_hid_devices() {
 # Check if touchpad is detected
 # Returns: 0 if detected, 1 if not
 input_touchpad_detected() {
-    # Check for i2c-hid touchpad
-    if [[ -d /sys/bus/i2c/devices ]]; then
-        local i2c_matches
-        i2c_matches=$(find /sys/bus/i2c/devices -name "*ELAN*" -o -name "*touchpad*" 2>/dev/null) || i2c_matches=""
-        if [[ -n "$i2c_matches" ]]; then
-            return 0
-        fi
+    # Ask udev's input_id classifier rather than matching device names: on the
+    # GZ302 the i2c ELAN device is the display digitizer, while the only real
+    # touchpad lives on USB in the detachable folio. ID_INPUT_TOUCHPAD is derived
+    # from the evdev capability bits, so it is bus-agnostic and never matches a
+    # touchscreen.
+    if command -v udevadm >/dev/null 2>&1; then
+        local d props
+        for d in /sys/class/input/event*; do
+            [[ -e "$d" ]] || continue
+            props=$(udevadm info --query=property "$d" 2>/dev/null) || continue
+            if grep -q '^ID_INPUT_TOUCHPAD=1$' <<< "$props"; then
+                return 0
+            fi
+        done
     fi
     
     # Check via libinput
@@ -66,14 +74,50 @@ input_touchpad_detected() {
 # Check if keyboard is detected
 # Returns: 0 if detected, 1 if not
 input_keyboard_detected() {
-    # Check via libinput or /proc/bus/input/devices
-    if [[ -f /proc/bus/input/devices ]]; then
-        if grep -qi "keyboard" /proc/bus/input/devices; then
+    # The i8042 stub ("AT Translated Set 2 keyboard") is registered on virtually
+    # every x86 machine, so a bare name grep can never report a missing keyboard.
+    # Exclude it only on devices whose keyboard is detachable — that is the one
+    # case this check exists to catch. Elsewhere a genuine PS/2 keyboard is real.
+    local d props strict="false"
+    [[ "${CAP_DETACHABLE_KB:-false}" == "true" ]] && strict="true"
+    
+    if command -v udevadm >/dev/null 2>&1; then
+        for d in /sys/class/input/event*; do
+            [[ -e "$d" ]] || continue
+            props=$(udevadm info --query=property "$d" 2>/dev/null) || continue
+            grep -q '^ID_INPUT_KEYBOARD=1$' <<< "$props" || continue
+            if [[ "$strict" == "true" ]] && grep -q '^ID_PATH=platform-i8042' <<< "$props"; then
+                continue
+            fi
             return 0
-        fi
+        done
+        # Only a detachable-keyboard device may conclude "absent" from this scan.
+        [[ "$strict" == "true" ]] && return 1
     fi
     
-    return 1
+    # udev classification unavailable — fall back to the raw device list, still
+    # skipping the i8042 stub when the keyboard is supposed to be detachable.
+    [[ -f /proc/bus/input/devices ]] || return 1
+    if [[ "$strict" == "true" ]]; then
+        # Records are blank-line separated; a record only counts when its name
+        # says "keyboard" and its sysfs path is not the i8042 platform stub.
+        local line is_kbd="false" is_stub="false"
+        while IFS= read -r line; do
+            case "$line" in
+                "") if [[ "$is_kbd" == "true" && "$is_stub" == "false" ]]; then
+                        return 0
+                    fi
+                    is_kbd="false"
+                    is_stub="false"
+                    ;;
+                "N: Name="*) [[ "${line,,}" == *keyboard* ]] && is_kbd="true" ;;
+                "S: Sysfs=/devices/platform/i8042"*) is_stub="true" ;;
+            esac
+        done < /proc/bus/input/devices
+        [[ "$is_kbd" == "true" && "$is_stub" == "false" ]]
+        return
+    fi
+    grep -qi "keyboard" /proc/bus/input/devices
 }
 
 # Check if hid_asus kernel module is loaded
@@ -181,12 +225,11 @@ input_touchpad_forcing_applied() {
 # Check if i2c_hid_acpi quirk is applied
 # Returns: 0 if applied, 1 if not
 input_i2c_quirk_applied() {
-    if [[ -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf ]]; then
-        if grep -q "quirks=0x01" /etc/modprobe.d/i2c-hid-acpi-gz302.conf 2>/dev/null; then
-            return 0
-        fi
-    fi
-    return 1
+    [[ -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf ]] || return 1
+    grep -q "quirks=0x01" /etc/modprobe.d/i2c-hid-acpi-gz302.conf 2>/dev/null || return 1
+    # The file on its own proves nothing: modprobe discards unknown parameters,
+    # so the quirk only counts as applied when the module really exposes it.
+    _input_module_has_param i2c_hid_acpi quirks
 }
 
 # Check if HID reload service is enabled (legacy workaround)
@@ -279,6 +322,51 @@ EOF
 
 # --- Configuration Application (Idempotent) ---
 
+# Check whether a kernel module actually exposes a module parameter
+# Args: $1 = module name, $2 = parameter name
+# Returns: 0 if the parameter exists, 1 if not
+_input_module_has_param() {
+    local module="$1" param="$2" sysfs_name parms
+    sysfs_name="${module//-/_}"
+    
+    [[ -e "/sys/module/${sysfs_name}/parameters/${param}" ]] && return 0
+    
+    parms=$(modinfo -F parm "$module" 2>/dev/null) || return 1
+    grep -q "^${param}:" <<< "$parms"
+}
+
+# Emit the fnlock modprobe option for whichever module actually owns it
+# hid_asus exposes no module parameters on current kernels — fnlock_default
+# belongs to the asus_wmi core module — and modprobe silently drops unknown
+# parameters, so naming the wrong module writes a line the kernel ignores.
+# Returns: 0 if a line was emitted, 1 if no module exposes the parameter
+_input_fnlock_option_line() {
+    local module
+    for module in hid_asus asus_wmi; do
+        if _input_module_has_param "$module" fnlock_default; then
+            printf 'options %s fnlock_default=0\n' "$module"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Resolve the running kernel as a comparable number (e.g. 7.2 -> 702)
+# Prefers kernel-compat when the installer has sourced it, and falls back to
+# uname so the standalone library path reports a real version instead of 0.
+_input_kernel_ver() {
+    if declare -f kernel_get_version_num >/dev/null 2>&1; then
+        kernel_get_version_num
+        return 0
+    fi
+    
+    local kernel_version major minor
+    kernel_version=$(uname -r | cut -d. -f1,2)
+    major=$(echo "$kernel_version" | cut -d. -f1)
+    minor=$(echo "$kernel_version" | cut -d. -f2)
+    echo $((major * 100 + minor))
+}
+
 # Apply basic HID configuration (idempotent)
 # Returns: 0 if applied or already applied
 input_apply_hid_config() {
@@ -288,12 +376,13 @@ input_apply_hid_config() {
     fi
     
     # Create HID configuration
-    cat > /etc/modprobe.d/hid-asus.conf <<'EOF'
-# ASUS HID configuration for GZ302
-# fnlock_default=0: F1-F12 keys work as media keys by default
-# Kernel 6.15+ includes mature touchpad gesture support and improved ASUS HID integration
-options hid_asus fnlock_default=0
-EOF
+    {
+        printf '# ASUS HID configuration for GZ302\n'
+        printf '# fnlock_default=0: F1-F12 keys work as media keys by default\n'
+        printf '# Kernel 6.15+ includes mature touchpad gesture support and improved ASUS HID integration\n'
+        _input_fnlock_option_line || \
+            printf '# no loaded module exposes fnlock_default on kernel %s\n' "$(uname -r)"
+    } > /etc/modprobe.d/hid-asus.conf
     
     return 0
 }
@@ -304,12 +393,19 @@ input_apply_touchpad_forcing() {
     # This is a legacy workaround for kernel < 6.17
     # Should only be called if kernel requires it
     
-    cat > /etc/modprobe.d/hid-asus.conf <<'EOF'
-# ASUS HID configuration for GZ302
-# fnlock_default=0: F1-F12 keys work as media keys by default
-# enable_touchpad=1: Force touchpad detection (needed for kernel < 6.17)
-options hid_asus fnlock_default=0 enable_touchpad=1
-EOF
+    # Each option is written on its own line, gated on the module that owns it —
+    # a combined "options hid_asus fnlock_default=0 enable_touchpad=1" line is
+    # discarded wholesale by modprobe when hid_asus has neither parameter.
+    {
+        printf '# ASUS HID configuration for GZ302\n'
+        printf '# fnlock_default=0: F1-F12 keys work as media keys by default\n'
+        _input_fnlock_option_line || \
+            printf '# no loaded module exposes fnlock_default on kernel %s\n' "$(uname -r)"
+        if _input_module_has_param hid_asus enable_touchpad; then
+            printf '# enable_touchpad=1: Force touchpad detection (needed for kernel < 6.17)\n'
+            printf 'options hid_asus enable_touchpad=1\n'
+        fi
+    } > /etc/modprobe.d/hid-asus.conf
     
     return 0
 }
@@ -322,12 +418,13 @@ input_remove_touchpad_forcing() {
     fi
     
     # Remove forcing option, keep fnlock setting
-    cat > /etc/modprobe.d/hid-asus.conf <<'EOF'
-# ASUS HID configuration for GZ302
-# fnlock_default=0: F1-F12 keys work as media keys by default
-# Kernel 6.17+ handles touchpad enumeration natively
-options hid_asus fnlock_default=0
-EOF
+    {
+        printf '# ASUS HID configuration for GZ302\n'
+        printf '# fnlock_default=0: F1-F12 keys work as media keys by default\n'
+        printf '# Kernel 6.17+ handles touchpad enumeration natively\n'
+        _input_fnlock_option_line || \
+            printf '# no loaded module exposes fnlock_default on kernel %s\n' "$(uname -r)"
+    } > /etc/modprobe.d/hid-asus.conf
     
     return 0
 }
@@ -335,6 +432,18 @@ EOF
 # Apply i2c_hid_acpi quirk (idempotent)
 # Returns: 0 if applied or already applied
 input_apply_i2c_quirk() {
+    # No shipped kernel exposes a "quirks" parameter on i2c_hid_acpi (i2c-hid
+    # quirks live in an in-kernel DMI table), so writing the option only earns an
+    # "unknown parameter ... ignored" line on every boot. Clear our own stale
+    # file instead, and keep the write for a kernel that does expose it.
+    if ! _input_module_has_param i2c_hid_acpi quirks; then
+        if [[ -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf ]] && \
+           grep -q 'ASUS GZ302 touchpad stability' /etc/modprobe.d/i2c-hid-acpi-gz302.conf 2>/dev/null; then
+            rm -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf
+        fi
+        return 0
+    fi
+    
     if input_i2c_quirk_applied; then
         return 0  # Already applied
     fi
@@ -414,18 +523,7 @@ input_apply_configuration() {
     
     # Auto-detect kernel version if not provided
     if [[ -z "$kernel_ver" ]]; then
-        # Try to use kernel-compat library if available
-        if declare -f kernel_get_version_num >/dev/null 2>&1; then
-            kernel_ver=$(kernel_get_version_num)
-        else
-            # Fallback: calculate manually
-            local kernel_version
-            kernel_version=$(uname -r | cut -d. -f1,2)
-            local major minor
-            major=$(echo "$kernel_version" | cut -d. -f1)
-            minor=$(echo "$kernel_version" | cut -d. -f2)
-            kernel_ver=$((major * 100 + minor))
-        fi
+        kernel_ver=$(_input_kernel_ver)
     fi
     
     echo "Configuring ASUS input devices..."
@@ -509,6 +607,13 @@ EOF
 # Returns: 0 if removed
 input_remove_keyboard_remap() {
     rm -f /etc/udev/hwdb.d/90-gz302-remap.hwdb
+    
+    # Removing the source is not enough: the property stays in the compiled
+    # hwdb.bin and on already-enumerated devices until the database is rebuilt.
+    systemd-hwdb update 2>/dev/null || true
+    udevadm control --reload 2>/dev/null || true
+    udevadm trigger 2>/dev/null || true
+    
     return 0
 }
 
@@ -589,11 +694,7 @@ input_print_status() {
     
     # Check for obsolete workarounds on kernel 6.17+
     local kernel_ver
-    if declare -f kernel_get_version_num >/dev/null 2>&1; then
-        kernel_ver=$(kernel_get_version_num)
-    else
-        kernel_ver=0
-    fi
+    kernel_ver=$(_input_kernel_ver)
     
     if [[ $kernel_ver -ge 617 ]]; then
         if [[ "$touchpad_forcing" == "true" ]]; then

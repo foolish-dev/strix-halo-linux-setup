@@ -1,3 +1,8 @@
+# CI (.github/workflows/validate.yml, python-sanity job) enforces ONLY the
+# error classes: flake8 --select=E9,F63,F7,F82 (syntax errors and undefined
+# names). The style settings below are aspirational and are applied when you
+# run flake8 locally or through an editor integration; the tree does not
+# currently satisfy max-line-length.
 [flake8]
 exclude = .venv,ollama-source
 max-line-length = 88

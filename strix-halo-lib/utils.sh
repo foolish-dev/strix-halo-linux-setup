@@ -9,7 +9,7 @@ set -euo pipefail
 
 # ==============================================================================
 # Strix Halo Shared Utilities Library
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This library contains shared functions for the Strix Halo Linux Setup scripts.
 # It is sourced by strix-halo-setup.sh and all optional modules.
@@ -457,7 +457,9 @@ create_config_backup() {
     # Create backup directory
     mkdir -p "$backup_subdir"
     
-    print_subsection "Creating Configuration Backup"
+    # Decoration goes to stderr like info()/warning(): stdout carries only
+    # the backup path this function returns.
+    print_subsection "Creating Configuration Backup" >&2
     info "Backup location: $backup_subdir"
     
     local backed_up=0
@@ -471,10 +473,10 @@ create_config_backup() {
             while IFS= read -r f; do
                 if [[ -f "$f" ]]; then
                     cp "$f" "$backup_subdir/modprobe.d/"
-                    ((backed_up++))
+                    backed_up=$((backed_up + 1))
                 fi
             done <<< "$modprobe_files"
-            completed_item "Modprobe configurations"
+            completed_item "Modprobe configurations" >&2
         fi
     fi
     
@@ -487,10 +489,10 @@ create_config_backup() {
             while IFS= read -r f; do
                 if [[ -f "$f" ]]; then
                     cp "$f" "$backup_subdir/systemd/"
-                    ((backed_up++))
+                    backed_up=$((backed_up + 1))
                 fi
             done <<< "$systemd_files"
-            completed_item "Systemd services"
+            completed_item "Systemd services" >&2
         fi
     fi
     
@@ -503,10 +505,10 @@ create_config_backup() {
             while IFS= read -r f; do
                 if [[ -f "$f" ]]; then
                     cp "$f" "$backup_subdir/sudoers.d/"
-                    ((backed_up++))
+                    backed_up=$((backed_up + 1))
                 fi
             done <<< "$sudoers_files"
-            completed_item "Sudoers configurations"
+            completed_item "Sudoers configurations" >&2
         fi
     fi
     
@@ -519,10 +521,10 @@ create_config_backup() {
             while IFS= read -r f; do
                 if [[ -f "$f" ]]; then
                     cp "$f" "$backup_subdir/bin/"
-                    ((backed_up++))
+                    backed_up=$((backed_up + 1))
                 fi
             done <<< "$script_files"
-            completed_item "Custom scripts"
+            completed_item "Custom scripts" >&2
         fi
     fi
     
@@ -532,8 +534,8 @@ create_config_backup() {
             local dir_name
             dir_name=$(basename "$config_dir")
             cp -r "$config_dir" "$backup_subdir/${dir_name}/"
-            completed_item "Config directory: $dir_name"
-            ((backed_up++)) || true
+            completed_item "Config directory: $dir_name" >&2
+            backed_up=$((backed_up + 1))
         fi
     done
     
@@ -552,7 +554,7 @@ EOF
     
     if [[ $backed_up -gt 0 ]]; then
         success "Backup created: $backup_subdir"
-        print_tip "To restore: sudo cp -r $backup_subdir/* /"
+        print_tip "To restore: sudo cp -r $backup_subdir/* /" >&2
     else
         info "No existing configurations to backup"
         rmdir "$backup_subdir" 2>/dev/null || true
@@ -582,7 +584,7 @@ list_backups() {
             else
                 info "$name"
             fi
-            ((count++))
+            count=$((count + 1))
         fi
     done
     

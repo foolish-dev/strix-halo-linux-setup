@@ -125,7 +125,18 @@ bash tests/device-manager-detection.sh
 
 This covers the Strix Halo platform gate, known-device DMI aliases, generic fallback handling, and the ASUS command-center/z13ctl capability split.
 
-### 4. Generated Content Sync
+### 4. Detection Pipeline Robustness
+
+**Required when touching any detection helper:**
+```bash
+bash tests/detection-pipeline-robustness.sh
+```
+
+This guards the `set -euo pipefail` + `producer | grep -q` failures and
+capability-flag false negatives this project has had to fix by hand before. It
+uses synthetic `lspci`/`lsusb`/`lsmod` fixtures and touches no hardware.
+
+### 5. Generated Content Sync
 
 **Required when changing the supported-device matrix or profile metadata:**
 ```bash
@@ -133,14 +144,14 @@ bash scripts/sync-device-matrix.sh
 git diff -- README.md strix-halo-setup.sh docs/technical/external-integrations-catalog.md
 ```
 
-### 5. Version Consistency
+### 6. Version Consistency
 
 **Required before committing:**
 ```bash
 bash tests/validate-version-sync.sh
 ```
 
-### 6. Distribution Testing
+### 7. Distribution Testing
 
 **Strongly recommended:**
 Test your changes on all supported distributions:
@@ -159,6 +170,7 @@ You can use virtual machines or containers for testing.
    - Run syntax validation: `bash -n script.sh`
    - Run shellcheck: `shellcheck script.sh`
     - Run device-profile regression checks when touching `strix-halo-lib/device-manager.sh`: `bash tests/device-manager-detection.sh`
+    - Run detection-pipeline robustness checks when touching any detection helper: `bash tests/detection-pipeline-robustness.sh`
     - Run generated-content sync when changing supported devices: `bash scripts/sync-device-matrix.sh`
     - Run version validation: `bash tests/validate-version-sync.sh`
    - Test on target hardware or VM if possible
@@ -178,7 +190,7 @@ You can use virtual machines or containers for testing.
 
 ## 📦 Module Development
 
-When creating or modifying modules (`gz302-*.sh`):
+When creating or modifying modules (`modules/{gaming,llm,hypervisor}.sh`):
 
 1. **Follow the modular pattern**: Each module should be self-contained
 2. **Include standard helpers**: Copy color codes and helper functions
@@ -320,14 +332,17 @@ For new features:
    - `command-center/src/command_center.py` — Update About dialog version string
    - `pkg/arch/PKGBUILD` — `pkgver=5.1.2`
    - `README.md` — Update any version badges or references
+   - `docs/README.md` — the `Unified installer (v5.1.2)` line
+   - `docs/testing-guide.md` — the `**Current Version:**` line
+   - `strix-halo-lib/display-fix.sh` — two strings that are **not** `# Version:`
+     headers: the `echo "5.1.2"` in `display_fix_lib_version()` and the
+     `GZ302 Display Fix Library v5.1.2` banner in `display_fix_lib_help()`
    - `docs/CHANGELOG.md` — Add new version entry with changes
 
 3. **Verify version sync**:
    ```bash
-   # Check all version headers match
-   grep -rn "Version:" strix-halo-setup.sh strix-halo-lib/ modules/ | grep -v "Kernel Version"
-   cat VERSION command-center/VERSION
-   grep "pkgver=" pkg/arch/PKGBUILD
+   # Authoritative check — this is exactly what the version-check CI job runs
+   bash tests/validate-version-sync.sh
    ```
 
 4. **Commit with version in message**:
@@ -341,8 +356,8 @@ For new features:
 - Fixed a bug? → PATCH: `5.1.1` → `5.1.2`
 - Added a new module? → MINOR: `5.1.2` → `5.2.0`
 - Changed installer architecture? → MAJOR: `5.2.0` → `6.0.0`
-- Updated documentation only? → PATCH: `5.1.2` → `6.0.0`
-- Fixed typo in comments? → PATCH: `6.0.0` → `6.0.0`
+- Updated documentation only? → PATCH: `5.1.2` → `5.1.3`
+- Fixed typo in comments? → PATCH: `5.1.3` → `5.1.4`
 
 **NO exceptions** - every merged change must increment the version number.
 
@@ -355,12 +370,25 @@ When updating documentation:
 3. **Use clear examples**: Show actual commands users would run
 4. **Maintain consistency**: Follow existing formatting and style
 
+### Lint configuration status
+
+- `.flake8` — the `python-sanity` CI job runs
+  `flake8 --select=E9,F63,F7,F82 command-center/src` (syntax errors and undefined
+  names only). The style settings in `.flake8`, including `max-line-length = 88`,
+  are for local/editor runs and are **not** enforced by CI; the tree does not
+  currently satisfy them.
+- `.markdownlint.json` — editor/local convenience only. No CI job runs
+  markdownlint, and the docs tree has not been made to pass it. Fix the
+  outstanding rule violations before wiring up a job.
+
 ## ✅ Checklist Before Submitting
 
 - [ ] **Version bumped** in root `VERSION` file and synced to all locations
 - [ ] **CHANGELOG.md updated** with version entry and changes
 - [ ] Code passes `bash -n` syntax check
 - [ ] Code passes `shellcheck` with zero warnings
+- [ ] `bash tests/detection-pipeline-robustness.sh` passes (detection helpers)
+- [ ] `bash tests/validate-version-sync.sh` passes
 - [ ] Changes tested on at least one supported distribution
 - [ ] All 4 distributions have equivalent implementation
 - [ ] Documentation updated if needed

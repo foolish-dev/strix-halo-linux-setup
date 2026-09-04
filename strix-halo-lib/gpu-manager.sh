@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 GPU Manager Library
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This library manages AMD Radeon 8060S (RDNA 3.5) integrated GPU configuration
 # for the GZ302 (Strix Halo platform).
@@ -96,6 +96,19 @@ gpu_get_firmware_dir() {
     echo "/lib/firmware/amdgpu"
 }
 
+# Read an AMD IP block version out of the GPU's IP discovery table.
+# Args: $1 = IP block name as exposed under ip_discovery (GC, SDMA0, MP0, DMU, ...)
+# Returns: 0 and prints "<major>_<minor>_<revision>", 1 if unavailable
+# Note: ip_discovery is absent on pre-discovery ASICs and older kernels, so every
+# caller must fall back to a constant.
+gpu_get_ip_version() {
+    local card base
+    card=$(gpu_get_drm_card) || return 1
+    base="/sys/class/drm/${card}/device/ip_discovery/die/0/$1/0"
+    [[ -r "$base/major" ]] || return 1
+    printf '%s_%s_%s\n' "$(cat "$base/major")" "$(cat "$base/minor")" "$(cat "$base/revision")"
+}
+
 # --- Firmware Verification ---
 
 # Check if specific firmware file exists
@@ -121,44 +134,80 @@ gpu_firmware_exists() {
 # Output: Status of each firmware file
 gpu_verify_firmware() {
     local all_present=true
-    local gc_ver="11_5_1"
-    
-    # Try to detect actual GC version from dmesg or debugfs
-    local kernel_log
-    kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
-    if grep -q "gc_11_5_2" <<< "$kernel_log"; then
-        gc_ver="11_5_2"
-    elif grep -q "gc_12_0_1" <<< "$kernel_log"; then
-        gc_ver="12_0_1"
-    else
-        local drm_index fw_info
-        drm_index=$(gpu_get_drm_index) || drm_index=""
-        fw_info="/sys/kernel/debug/dri/${drm_index:-0}/amdgpu_firmware_info"
-        if [[ -f "$fw_info" ]]; then
-            local detected
-            detected=$(grep -oP "gc_\d+_\d+_\d+" "$fw_info" | head -1 | sed 's/gc_//')
-            [[ -n "$detected" ]] && gc_ver="$detected"
+    local fw_file
+    local gc_ver sdma_ver psp_ver dcn_ver
+
+    # amdgpu derives every firmware file name from the IP-discovery versions it
+    # reads off the ASIC, so resolve them per IP block instead of hardcoding one
+    # SKU's names (Strix Halo is GC 11.5.1 / SDMA 6.1.1 / MP0 14.0.1 / DMU 3.5.1).
+    gc_ver=$(gpu_get_ip_version GC) || gc_ver=""
+    sdma_ver=$(gpu_get_ip_version SDMA0) || sdma_ver="6_1_1"
+    psp_ver=$(gpu_get_ip_version MP0) || psp_ver="14_0_1"
+    dcn_ver=$(gpu_get_ip_version DMU) || dcn_ver="3_5_1"
+
+    if [[ -z "$gc_ver" ]]; then
+        # Pre-discovery ASICs / older kernels: fall back to dmesg, then debugfs.
+        gc_ver="11_5_1"
+        local kernel_log
+        kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
+        if grep -q "gc_11_5_2" <<< "$kernel_log"; then
+            gc_ver="11_5_2"
+        elif grep -q "gc_12_0_1" <<< "$kernel_log"; then
+            gc_ver="12_0_1"
+        else
+            local drm_index fw_info
+            drm_index=$(gpu_get_drm_index) || drm_index=""
+            fw_info="/sys/kernel/debug/dri/${drm_index:-0}/amdgpu_firmware_info"
+            if [[ -f "$fw_info" ]]; then
+                local detected
+                detected=$(grep -oP "gc_\d+_\d+_\d+" "$fw_info" 2>/dev/null | head -1 | sed 's/gc_//') || detected=""
+                [[ -n "$detected" ]] && gc_ver="$detected"
+            fi
         fi
     fi
 
     echo "GPU Firmware Verification (GC $gc_ver):"
-    
-    # Core graphics firmware components
+
+    # Core graphics firmware components. IMU and MES are mandatory on GFX11.5 -
+    # amdgpu does not initialize at all without them.
     local required_files=(
         "gc_${gc_ver}_pfp.bin"
         "gc_${gc_ver}_me.bin"
         "gc_${gc_ver}_rlc.bin"
         "gc_${gc_ver}_mec.bin"
+        "gc_${gc_ver}_imu.bin"
+        "gc_${gc_ver}_mes1.bin"
+        "gc_${gc_ver}_mes_2.bin"
     )
-    
+
     # Add common IP block firmware
-    required_files+=("sdma_6_1_0.bin" "psp_14_0_4_ta.bin")
-    
-    # DCN version might vary
-    if gpu_firmware_exists "dcn_3_5_1_dmcub.bin"; then
-        required_files+=("dcn_3_5_1_dmcub.bin")
+    required_files+=("sdma_${sdma_ver}.bin" "psp_${psp_ver}_ta.bin" "psp_${psp_ver}_toc.bin")
+
+    # DCN ships either per-revision (dcn_3_5_1_dmcub.bin) or per-minor
+    # (dcn_3_5_dmcub.bin); there is no _0_ revision variant in linux-firmware.
+    if gpu_firmware_exists "dcn_${dcn_ver}_dmcub.bin"; then
+        required_files+=("dcn_${dcn_ver}_dmcub.bin")
     else
-        required_files+=("dcn_3_5_0_dmcub.bin")
+        required_files+=("dcn_${dcn_ver%_*}_dmcub.bin")
+    fi
+
+    # Require only names the running driver actually declares. This keeps the
+    # check exact on parts without an IMU and on GFX12 (uni_mes, no mes1/mes_2)
+    # without any further per-chip branching.
+    local declared=""
+    if command -v modinfo >/dev/null 2>&1; then
+        declared=$( { modinfo -F firmware amdgpu 2>/dev/null || true; } | sed 's#^amdgpu/##' )
+    fi
+    if [[ -n "$declared" ]]; then
+        local filtered=()
+        for fw_file in "${required_files[@]}"; do
+            if grep -qxF "$fw_file" <<< "$declared"; then
+                filtered+=("$fw_file")
+            fi
+        done
+        if [[ ${#filtered[@]} -gt 0 ]]; then
+            required_files=("${filtered[@]}")
+        fi
     fi
 
     for fw_file in "${required_files[@]}"; do
@@ -367,9 +416,6 @@ gpu_regenerate_initramfs() {
 
     if command -v mkinitcpio >/dev/null 2>&1; then
         if mkinitcpio -P; then
-            # Keep this in sync with display-fix.sh, which uses the same guard to
-            # avoid a second mkinitcpio run after bootloader display-fix updates.
-            export GZ302_MKINITCPIO_DONE=true
             export GZ302_GPU_INITRAMFS_DONE=true
             return 0
         fi
@@ -436,10 +482,17 @@ gpu_configure_early_kms() {
     fi
 
     echo "Checking Early KMS configuration..."
-    # Read the MODULES line
+    # Read the MODULES line. Only the single-line array form can be rewritten
+    # safely; a multi-line array or the legacy MODULES="" string form would leave
+    # the sed below a no-op, so bail out loudly instead of claiming success.
     local modules_line
-    modules_line=$(grep "^MODULES=" /etc/mkinitcpio.conf)
-    
+    modules_line=$(grep -m1 "^MODULES=" /etc/mkinitcpio.conf || true)
+
+    if [[ ! "$modules_line" =~ ^MODULES=\(.*\) ]]; then
+        gpu_log_warning "Cannot enable Early KMS automatically: unsupported MODULES= form in /etc/mkinitcpio.conf - add 'amdgpu' to MODULES and run mkinitcpio -P manually."
+        return 1
+    fi
+
     if [[ "$modules_line" != *"amdgpu"* ]]; then
         echo "Enabling Early KMS for amdgpu (fixes boot/reboot freeze)..."
         # Backup
@@ -448,11 +501,17 @@ gpu_configure_early_kms() {
         # Add amdgpu to MODULES. Robustly handles () or (module1 module2)
         sed -i -E 's/^MODULES=\((.*)\)/MODULES=(\1 amdgpu)/' /etc/mkinitcpio.conf
         sed -i 's/MODULES=( amdgpu)/MODULES=(amdgpu)/' /etc/mkinitcpio.conf
-        
+
+        # Re-read the file: never rebuild or report success on an edit that did
+        # not land.
+        if ! grep -qE '^MODULES=\(([^)]*[[:space:]])?amdgpu([[:space:]][^)]*)?\)' /etc/mkinitcpio.conf; then
+            gpu_log_warning "Early KMS edit did not apply to /etc/mkinitcpio.conf - add 'amdgpu' to MODULES and run mkinitcpio -P manually."
+            return 1
+        fi
+
         echo "Regenerating initramfs..."
         if command -v mkinitcpio >/dev/null 2>&1; then
             if mkinitcpio -P; then
-                export GZ302_MKINITCPIO_DONE=true
                 echo "Early KMS enabled"
                 return 0
             else
@@ -614,7 +673,7 @@ Example Usage:
 GPU Details:
   Model: AMD Radeon 8060S
   Architecture: RDNA 3.5
-  Compute Units: 16
+  Compute Units: 40 (8060S) / 32 (8050S)
   Platform: Strix Halo (Zen 5 + RDNA 3.5)
   ROCm Compatible: Yes
   AI/ML Support: Yes (via ROCm)

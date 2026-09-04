@@ -1,10 +1,11 @@
-# Maintainer: th3cavalry <github.com/th3cavalry>
+# Maintainer: foolish-dev <github.com/foolish-dev>
+# Original: th3cavalry <github.com/th3cavalry>
 pkgname=strix-halo-setup
-pkgver=6.8.0
+pkgver=6.9.0
 pkgrel=1
 pkgdesc="Linux optimization suite for ASUS ROG Flow Z13 (GZ302) — z13ctl backend"
 arch=('any')
-url="https://github.com/th3cavalry/strix-halo-linux-setup"
+url="https://github.com/foolish-dev/strix-halo-linux-setup"
 license=('MIT')
 depends=('bash' 'curl')
 optdepends=(
@@ -14,14 +15,26 @@ optdepends=(
     'steam: Gaming support (optional module)'
     'ollama: AI support (optional module)'
 )
+# GitHub names the branch archive after the repository, not the package.
+_srcname="strix-halo-linux-setup-main"
 source=("${url}/archive/refs/heads/main.zip")
 sha256sums=('SKIP')
 
 package() {
-    cd "$srcdir/GZ302-Linux-Setup-main"
+    cd "$srcdir/$_srcname"
 
-    # Install main setup script
-    install -Dm755 strix-halo-setup.sh "$pkgdir/usr/local/bin/strix-halo-setup"
+    # Install the entry point alongside its libraries: resolve_script_dir derives
+    # SCRIPT_DIR from the executed file, so a copy in /usr/local/bin would not
+    # find strix-halo-lib/ and would re-download every library from GitHub.
+    install -Dm755 strix-halo-setup.sh "$pkgdir/usr/local/share/strix-halo/strix-halo-setup.sh"
+
+    # Thin wrapper keeps the documented `strix-halo-setup` command name
+    install -d "$pkgdir/usr/local/bin"
+    cat > "$pkgdir/usr/local/bin/strix-halo-setup" <<'WRAPPER'
+#!/bin/bash
+exec /usr/local/share/strix-halo/strix-halo-setup.sh "$@"
+WRAPPER
+    chmod 755 "$pkgdir/usr/local/bin/strix-halo-setup"
 
     # Install libraries
     install -d "$pkgdir/usr/local/share/strix-halo/strix-halo-lib"

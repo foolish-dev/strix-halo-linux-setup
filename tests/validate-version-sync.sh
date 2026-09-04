@@ -34,6 +34,8 @@ main() {
     local docs_readme_version
     local display_fix_version
     local display_fix_help_version
+    local display_manager_version
+    local testing_guide_version
     local script_version
 
     setup_header=$(grep '^# Version:' strix-halo-setup.sh | head -1 | sed 's/^# Version: //' || true)
@@ -45,6 +47,8 @@ main() {
     docs_readme_version=$(grep 'Unified installer (v' docs/README.md | head -1 | sed -E 's/.*\(v([0-9.]+)\).*/\1/' || true)
     display_fix_version=$(grep -E 'echo "[0-9.]+"' strix-halo-lib/display-fix.sh | head -1 | sed -E 's/.*"([0-9.]+)".*/\1/' || true)
     display_fix_help_version=$(grep '^GZ302 Display Fix Library v' strix-halo-lib/display-fix.sh | head -1 | sed -E 's/^GZ302 Display Fix Library v([0-9.]+)/\1/' || true)
+    display_manager_version=$(sed -n '/^display_lib_version()/,/^}/p' strix-halo-lib/display-manager.sh | grep -E 'echo "[0-9.]+"' | head -1 | sed -E 's/.*"([0-9.]+)".*/\1/' || true)
+    testing_guide_version=$(grep '^\*\*Current Version:\*\*' docs/testing-guide.md | head -1 | sed -E 's/.*\*\* *([0-9.]+).*/\1/' || true)
 
     require_equal 'strix-halo-setup.sh header' "$EXPECTED_VERSION" "$setup_header"
     require_equal 'strix-halo-setup.sh SETUP_VERSION' "$EXPECTED_VERSION" "$setup_constant"
@@ -55,6 +59,8 @@ main() {
     require_equal 'docs/README.md version reference' "$EXPECTED_VERSION" "$docs_readme_version"
     require_equal 'display_fix_lib_version()' "$EXPECTED_VERSION" "$display_fix_version"
     require_equal 'display_fix_lib_help()' "$EXPECTED_VERSION" "$display_fix_help_version"
+    require_equal 'display_lib_version()' "$EXPECTED_VERSION" "$display_manager_version"
+    require_equal 'docs/testing-guide.md version' "$EXPECTED_VERSION" "$testing_guide_version"
 
     for script in strix-halo-lib/*.sh modules/*.sh; do
         script_version=$(grep '^# Version:' "$script" | head -1 | sed 's/^# Version: //' || true)

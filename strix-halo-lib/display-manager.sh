@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 Display Manager Library
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This library provides refresh rate management and display control for the
 # ASUS ROG Flow Z13 (GZ302) with its 180Hz display.
@@ -17,7 +17,7 @@ set -euo pipefail
 #
 # Supported Environments:
 # - X11 (xrandr)
-# - Wayland (wlr-randr for wlroots, kscreen for KDE)
+# - Wayland (wlr-randr for wlroots, gdctl for GNOME >= 48, kscreen for KDE)
 # - DRM fallback
 #
 # Usage:
@@ -62,7 +62,14 @@ DISPLAY_VRR_MIN[maximum]="48";    DISPLAY_VRR_MAX[maximum]="180"
 DISPLAY_PROFILE_ORDER="emergency battery efficient balanced performance gaming maximum"
 
 # Configuration paths
-DISPLAY_CONFIG_DIR="/etc/strix-halo/rrcfg"
+# Root keeps the system-wide location so existing state and the uninstaller
+# keep working; an unprivileged session records its state per-user, because
+# display operations are compositor-side and must never require elevation.
+if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
+    DISPLAY_CONFIG_DIR="/etc/strix-halo/rrcfg"
+else
+    DISPLAY_CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME:-/tmp}/.config}/strix-halo/rrcfg"
+fi
 DISPLAY_CURRENT_PROFILE_FILE="$DISPLAY_CONFIG_DIR/current-profile"
 DISPLAY_VRR_ENABLED_FILE="$DISPLAY_CONFIG_DIR/vrr-enabled"
 DISPLAY_VRR_RANGES_FILE="$DISPLAY_CONFIG_DIR/vrr-ranges"
@@ -75,8 +82,12 @@ GZ302_RESOLUTION="2560x1600"
 # --- Display Detection (Read-Only) ---
 
 # Check if running in X11
+# Wayland compositors export DISPLAY for XWayland, whose RandR mode list is
+# synthetic and whose modeset requests the compositor ignores, so a Wayland
+# session must never be treated as X11.
 # Returns: 0 if X11, 1 otherwise
 display_is_x11() {
+    display_is_wayland && return 1
     [[ -n "${DISPLAY:-}" ]] && command -v xrandr >/dev/null 2>&1
 }
 
@@ -105,10 +116,35 @@ display_has_kscreen() {
     command -v kscreen-doctor >/dev/null 2>&1
 }
 
+# Extract the wlr-randr block belonging to a single output
+# Args: $1 = display
+# Returns: The output's indented lines (header excluded)
+display_wlr_output_block() {
+    local display="$1"
+    wlr-randr 2>/dev/null | awk -v o="$display" '
+        $1 == o { b = 1; next }
+        b && /^[^[:space:]]/ { b = 0 }
+        b { print }
+    ' || true
+}
+
+# Extract the `gdctl show` block belonging to a single monitor
+# Args: $1 = display
+# Returns: The monitor's lines (header excluded)
+display_gdctl_monitor_block() {
+    local display="$1"
+    gdctl show 2>/dev/null | awk -v o="$display" '
+        $0 ~ ("Monitor " o "([^0-9A-Za-z_-]|$)") { b = 1; next }
+        b && (/Monitor / || /Logical monitor/) { b = 0 }
+        b { print }
+    ' || true
+}
+
 # Detect connected displays
 # Returns: Space-separated list of display names
 display_detect_outputs() {
     local displays=()
+    local connector name
     
     if display_is_x11; then
         # X11 environment
@@ -116,14 +152,26 @@ display_detect_outputs() {
     elif display_has_wlr_randr; then
         # Wayland with wlr-randr
         mapfile -t displays < <(wlr-randr 2>/dev/null | grep -E "^[A-Za-z]" | awk '{print $1}')
+    elif display_has_gdctl; then
+        # GNOME >= 48 (Wayland or X11)
+        mapfile -t displays < <(gdctl show 2>/dev/null | grep -oE "Monitor [A-Za-z0-9_-]+" | awk '{print $2}')
     elif display_has_kscreen; then
         # KDE Plasma on Wayland
         mapfile -t displays < <(kscreen-doctor -o 2>/dev/null | grep -E "^Output:" | awk '{print $2}' | cut -d: -f1)
     fi
     
-    # Fallback to DRM
+    # Fallback to DRM: only connected connectors, and with the cardN- prefix
+    # stripped so the names match what xrandr/wlr-randr/kscreen-doctor expect
     if [[ ${#displays[@]} -eq 0 && -d /sys/class/drm ]]; then
-        mapfile -t displays < <(find /sys/class/drm -maxdepth 1 -name "card*-*" -type l -exec basename {} \; 2>/dev/null | grep -v "Virtual" | head -5)
+        mapfile -t displays < <(
+            for connector in /sys/class/drm/card*-*/; do
+                [[ "$(cat "${connector}status" 2>/dev/null)" == "connected" ]] || continue
+                name=$(basename "$connector")
+                name="${name#card*-}"
+                [[ "$name" == Writeback-* || "$name" == Virtual* ]] && continue
+                printf '%s\n' "$name"
+            done
+        )
     fi
     
     # Default fallback
@@ -163,13 +211,16 @@ display_get_current_refresh() {
     
     if display_is_x11; then
         # X11: Parse current mode from xrandr
-        rate=$(xrandr 2>/dev/null | grep -A20 "^${display}" | grep -E "^\s+" | grep "\*" | head -1 | grep -oP '\d+\.\d+(?=\*?)' | cut -d. -f1)
+        rate=$(xrandr 2>/dev/null | grep -A20 "^${display}" | grep -E "^\s+" | grep "\*" | head -1 | grep -oP '\d+\.\d+(?=\*?)' | cut -d. -f1) || rate=""
     elif display_has_wlr_randr; then
-        # Wayland with wlr-randr
-        rate=$(wlr-randr 2>/dev/null | grep -A5 "^${display}" | grep -oP '\d+(?=\.\d+ Hz)' | head -1)
+        # Wayland with wlr-randr: the active mode is the one marked "current"
+        rate=$(display_wlr_output_block "$display" | awk '/Hz/ && /current/ {print $3; exit}' | cut -d. -f1) || rate=""
+    elif display_has_gdctl; then
+        # GNOME >= 48: the active mode is tagged [current]
+        rate=$(display_gdctl_monitor_block "$display" | grep -F '[current]' | grep -oE '@[0-9]+' | head -1 | tr -d '@') || rate=""
     elif display_has_kscreen; then
         # KDE Plasma
-        rate=$(kscreen-doctor -o 2>/dev/null | grep -A5 "$display" | grep "Refresh:" | grep -oP '\d+(?=Hz)')
+        rate=$(kscreen-doctor -o 2>/dev/null | grep -A5 "$display" | grep "Refresh:" | grep -oP '\d+(?=Hz)') || rate=""
     fi
     
     # Fallback
@@ -180,27 +231,58 @@ display_get_current_refresh() {
     echo "$rate"
 }
 
-# Get supported refresh rates for a display
+# Get supported refresh rates for a display at its current resolution
 # Args: $1 = display (optional)
-# Returns: Newline-separated list of rates
+# Returns: Newline-separated list of rates, empty if the list cannot be read
 display_get_supported_rates() {
     local display="${1:-$(display_get_primary)}"
     local rates=""
+    local res
+    res=$(display_get_current_resolution "$display")
     
     if display_is_x11; then
         # X11: Extract all refresh rates from current resolution mode
-        rates=$(xrandr 2>/dev/null | grep -A20 "^${display}" | grep -E "^\s+${GZ302_RESOLUTION}" | grep -oP '\d+\.\d+' | cut -d. -f1 | sort -nu)
+        rates=$(xrandr 2>/dev/null | grep -A20 "^${display}" | grep -E "^\s+${res}" | grep -oP '\d+\.\d+' | cut -d. -f1 | sort -nu) || rates=""
     elif display_has_wlr_randr; then
-        rates=$(wlr-randr 2>/dev/null | grep -A30 "^${display}" | grep -oP '\d+(?=\.\d+ Hz)' | sort -nu)
+        rates=$(display_wlr_output_block "$display" | awk -v r="$res" '$1 == r && /Hz/ {print $3}' | cut -d. -f1 | sort -nu) || rates=""
+    elif display_has_gdctl; then
+        rates=$(display_gdctl_monitor_block "$display" | grep -oE "${res}@[0-9]+" | cut -d@ -f2 | sort -nu) || rates=""
     fi
     
-    # Fallback: Common GZ302 rates
+    # Nothing readable: emit nothing so callers can tell "unknown" apart from
+    # a real list instead of trusting an invented set of rates
     if [[ -z "$rates" ]]; then
-        printf '%s\n' 30 48 60 90 120 180
-        return
+        return 0
     fi
     
     echo "$rates"
+}
+
+# Get the current resolution of a display
+# Args: $1 = display (optional)
+# Returns: Resolution as WIDTHxHEIGHT
+display_get_current_resolution() {
+    local display="${1:-$(display_get_primary)}"
+    local res=""
+    
+    if display_is_x11; then
+        # Match the WxH+X+Y geometry token so the optional "primary" keyword
+        # does not shift the field position
+        res=$(xrandr 2>/dev/null | grep -E "^${display} connected" | grep -oE '[0-9]+x[0-9]+\+[0-9]+\+[0-9]+' | head -1 | cut -d+ -f1) || res=""
+    elif display_has_wlr_randr; then
+        res=$(display_wlr_output_block "$display" | awk '/Hz/ && /current/ {print $1; exit}') || res=""
+    elif display_has_gdctl; then
+        res=$(display_gdctl_monitor_block "$display" | grep -F '[current]' | grep -oE '[0-9]+x[0-9]+' | head -1) || res=""
+    elif display_has_kscreen; then
+        res=$(kscreen-doctor -o 2>/dev/null | grep -A10 "Output:.*${display}" | grep -oE '[0-9]+x[0-9]+' | head -1) || res=""
+    fi
+    
+    # Last resort: the GZ302 panel geometry
+    if [[ -z "$res" ]]; then
+        res="$GZ302_RESOLUTION"
+    fi
+    
+    echo "$res"
 }
 
 # --- VRR (Variable Refresh Rate) ---
@@ -208,6 +290,15 @@ display_get_supported_rates() {
 # Check if VRR is supported
 # Returns: 0 if supported, 1 if not
 display_vrr_supported() {
+    # Positive evidence from a compositor backend, when one is reachable
+    local wlr_state
+    if display_has_wlr_randr; then
+        wlr_state=$(wlr-randr 2>/dev/null) || wlr_state=""
+        if grep -q "Adaptive Sync:" <<< "$wlr_state"; then
+            return 0
+        fi
+    fi
+    
     # Check kernel support
     if [[ ! -d /sys/class/drm ]]; then
         return 1
@@ -233,6 +324,30 @@ display_vrr_supported() {
     return 1
 }
 
+# Check whether a compositor reports adaptive sync as actually active
+# (as opposed to the preference recorded in DISPLAY_VRR_ENABLED_FILE)
+# Returns: 0 if active, 1 if inactive or unknown
+display_vrr_active() {
+    local state
+    if display_has_wlr_randr; then
+        state=$(wlr-randr 2>/dev/null) || state=""
+        if grep -q "Adaptive Sync: enabled" <<< "$state"; then
+            return 0
+        fi
+        return 1
+    fi
+    
+    if display_has_kscreen; then
+        state=$(kscreen-doctor -o 2>/dev/null) || state=""
+        if grep -qiE "vrr.*(always|automatic)" <<< "$state"; then
+            return 0
+        fi
+        return 1
+    fi
+    
+    return 1
+}
+
 # Check if VRR is currently enabled
 # Returns: 0 if enabled, 1 if disabled
 display_vrr_enabled() {
@@ -251,10 +366,13 @@ display_vrr_enable() {
         return 1
     fi
     
-    mkdir -p "$DISPLAY_CONFIG_DIR"
-    echo "true" > "$DISPLAY_VRR_ENABLED_FILE"
+    mkdir -p "$DISPLAY_CONFIG_DIR" 2>/dev/null || true
+    echo "true" > "$DISPLAY_VRR_ENABLED_FILE" 2>/dev/null \
+        || echo "Warning: could not record VRR state in $DISPLAY_VRR_ENABLED_FILE" >&2
     
-    # Try to enable at DRM level
+    # Try to enable at DRM level (amdgpu exposes VRR as a KMS property rather
+    # than a sysfs attribute, so this is a no-op there — kept for kernels and
+    # drivers that do export it)
     local drm_device
     for drm_device in /sys/class/drm/card*-*/; do
         if [[ -f "${drm_device}vrr_enabled" ]]; then
@@ -262,15 +380,31 @@ display_vrr_enable() {
         fi
     done
     
-    echo "VRR enabled"
+    # The compositor is the only thing that can actually flip adaptive sync
+    local applied=false
+    local vrr_display
+    for vrr_display in $(display_detect_outputs); do
+        if display_has_wlr_randr && wlr-randr --output "$vrr_display" --adaptive-sync enabled 2>/dev/null; then
+            applied=true
+        elif display_has_kscreen && kscreen-doctor "output.${vrr_display}.vrrpolicy.always" 2>/dev/null; then
+            applied=true
+        fi
+    done
+    
+    if [[ "$applied" == true ]]; then
+        echo "VRR enabled"
+    else
+        echo "VRR preference recorded (no compositor backend applied it)"
+    fi
     return 0
 }
 
 # Disable VRR
 # Returns: 0 on success
 display_vrr_disable() {
-    mkdir -p "$DISPLAY_CONFIG_DIR"
-    echo "false" > "$DISPLAY_VRR_ENABLED_FILE"
+    mkdir -p "$DISPLAY_CONFIG_DIR" 2>/dev/null || true
+    echo "false" > "$DISPLAY_VRR_ENABLED_FILE" 2>/dev/null \
+        || echo "Warning: could not record VRR state in $DISPLAY_VRR_ENABLED_FILE" >&2
     
     local drm_device
     for drm_device in /sys/class/drm/card*-*/; do
@@ -279,7 +413,21 @@ display_vrr_disable() {
         fi
     done
     
-    echo "VRR disabled"
+    local applied=false
+    local vrr_display
+    for vrr_display in $(display_detect_outputs); do
+        if display_has_wlr_randr && wlr-randr --output "$vrr_display" --adaptive-sync disabled 2>/dev/null; then
+            applied=true
+        elif display_has_kscreen && kscreen-doctor "output.${vrr_display}.vrrpolicy.never" 2>/dev/null; then
+            applied=true
+        fi
+    done
+    
+    if [[ "$applied" == true ]]; then
+        echo "VRR disabled"
+    else
+        echo "VRR preference recorded (no compositor backend applied it)"
+    fi
     return 0
 }
 
@@ -324,12 +472,15 @@ display_set_rate_xrandr() {
 display_set_rate_wlr() {
     local display="$1"
     local rate="$2"
+    local res
+    res=$(display_get_current_resolution "$display")
     
-    # wlr-randr requires full mode spec, try different formats
-    if wlr-randr --output "$display" --custom-mode "${GZ302_RESOLUTION}@${rate}Hz" 2>/dev/null; then
+    # wlr-randr requires a full mode spec. Prefer a mode the panel advertises;
+    # only ask the compositor to invent a modeline as a last resort.
+    if wlr-randr --output "$display" --mode "${res}@${rate}Hz" 2>/dev/null; then
         return 0
     fi
-    if wlr-randr --output "$display" --mode "${GZ302_RESOLUTION}@${rate}Hz" 2>/dev/null; then
+    if wlr-randr --output "$display" --custom-mode "${res}@${rate}Hz" 2>/dev/null; then
         return 0
     fi
     return 1
@@ -341,8 +492,38 @@ display_set_rate_wlr() {
 display_set_rate_kscreen() {
     local display="$1"
     local rate="$2"
+    local res
+    res=$(display_get_current_resolution "$display")
     
-    if kscreen-doctor "output.${display}.mode.${GZ302_RESOLUTION}@${rate}" 2>/dev/null; then
+    if kscreen-doctor "output.${display}.mode.${res}@${rate}" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+# Set refresh rate using gdctl (GNOME >= 48, X11/Wayland)
+# Args: $1 = display, $2 = rate
+# Returns: 0 on success, 1 on failure
+display_set_rate_gdctl() {
+    local display="$1"
+    local rate="$2"
+    local res outputs
+    
+    # `gdctl set` replaces the whole logical layout, so only drive it when the
+    # session has a single output rather than tearing down a multi-monitor
+    # arrangement one display at a time.
+    outputs=$(display_detect_outputs)
+    if [[ $(wc -w <<< "$outputs") -ne 1 ]]; then
+        return 1
+    fi
+    
+    res=$(display_get_current_resolution "$display")
+    
+    # gdctl addresses modes by the id shown in `gdctl show`
+    if gdctl set --logical-monitor --primary --monitor "$display" --mode "${res}@${rate}.000" 2>/dev/null; then
+        return 0
+    fi
+    if gdctl set --logical-monitor --primary --monitor "$display" --mode "${res}@${rate}" 2>/dev/null; then
         return 0
     fi
     return 1
@@ -371,10 +552,32 @@ display_apply_profile() {
     for display in $displays; do
         echo "Configuring display: $display"
         
+        # Snap the nominal profile rate onto a rate this output actually
+        # advertises. Ties keep the lower rate, so a battery profile never
+        # silently escalates. An unreadable list keeps the requested rate.
+        local supported rate best candidate
+        rate="$target_rate"
+        supported=$(display_get_supported_rates "$display" 2>/dev/null) || supported=""
+        if [[ -n "$supported" ]]; then
+            best=""
+            for candidate in $supported; do
+                if [[ -z "$best" ]] || (( (candidate > target_rate ? candidate - target_rate : target_rate - candidate) < \
+                                          (best > target_rate ? best - target_rate : target_rate - best) )); then
+                    best="$candidate"
+                fi
+            done
+            if [[ -n "$best" ]]; then
+                rate="$best"
+            fi
+        fi
+        if [[ "$rate" != "$target_rate" ]]; then
+            echo "  ${display} does not advertise ${target_rate}Hz — using nearest supported ${rate}Hz"
+        fi
+        
         # Try X11 first
         if display_is_x11; then
-            if display_set_rate_xrandr "$display" "$target_rate"; then
-                echo "  ✓ Set ${target_rate}Hz using xrandr"
+            if display_set_rate_xrandr "$display" "$rate"; then
+                echo "  ✓ Set ${rate}Hz using xrandr"
                 success=true
                 continue
             fi
@@ -382,8 +585,17 @@ display_apply_profile() {
         
         # Try wlr-randr
         if display_has_wlr_randr; then
-            if display_set_rate_wlr "$display" "$target_rate"; then
-                echo "  ✓ Set ${target_rate}Hz using wlr-randr"
+            if display_set_rate_wlr "$display" "$rate"; then
+                echo "  ✓ Set ${rate}Hz using wlr-randr"
+                success=true
+                continue
+            fi
+        fi
+        
+        # Try gdctl (GNOME >= 48)
+        if display_has_gdctl; then
+            if display_set_rate_gdctl "$display" "$rate"; then
+                echo "  ✓ Set ${rate}Hz using gdctl"
                 success=true
                 continue
             fi
@@ -391,8 +603,8 @@ display_apply_profile() {
         
         # Try kscreen
         if display_has_kscreen; then
-            if display_set_rate_kscreen "$display" "$target_rate"; then
-                echo "  ✓ Set ${target_rate}Hz using kscreen-doctor"
+            if display_set_rate_kscreen "$display" "$rate"; then
+                echo "  ✓ Set ${rate}Hz using kscreen-doctor"
                 success=true
                 continue
             fi
@@ -403,15 +615,17 @@ display_apply_profile() {
     
     if [[ "$success" == true ]]; then
         # Save current profile
-        mkdir -p "$DISPLAY_CONFIG_DIR"
-        echo "$profile" > "$DISPLAY_CURRENT_PROFILE_FILE"
+        mkdir -p "$DISPLAY_CONFIG_DIR" 2>/dev/null || true
+        echo "$profile" > "$DISPLAY_CURRENT_PROFILE_FILE" 2>/dev/null \
+            || echo "Warning: could not record profile in $DISPLAY_CURRENT_PROFILE_FILE" >&2
         
         # Apply VRR range if enabled
         if display_vrr_enabled; then
             local min_range="${DISPLAY_VRR_MIN[$profile]:-48}"
             local max_range="${DISPLAY_VRR_MAX[$profile]:-$target_rate}"
             echo "VRR range: ${min_range}-${max_range}Hz"
-            echo "${min_range}:${max_range}" > "$DISPLAY_VRR_RANGES_FILE"
+            echo "${min_range}:${max_range}" > "$DISPLAY_VRR_RANGES_FILE" 2>/dev/null \
+                || echo "Warning: could not record VRR range in $DISPLAY_VRR_RANGES_FILE" >&2
         fi
         
         # Apply frame limit if applicable
@@ -444,20 +658,35 @@ display_set_frame_limit() {
     local mangohud_dir="$user_home/.config/MangoHud"
     local mangohud_config="$mangohud_dir/MangoHud.conf"
     
-    mkdir -p "$mangohud_dir" 2>/dev/null || true
+    # When invoked through sudo the artefacts must belong to the user, or the
+    # user's own tools can no longer edit them
+    local sudo_group=""
+    if [[ -n "${SUDO_USER:-}" ]]; then
+        sudo_group=$(id -gn "$SUDO_USER" 2>/dev/null) || sudo_group=""
+    fi
+    
+    if [[ -n "$sudo_group" ]]; then
+        install -d -m 0755 -o "$SUDO_USER" -g "$sudo_group" "$mangohud_dir" 2>/dev/null || true
+    else
+        mkdir -p "$mangohud_dir" 2>/dev/null || true
+    fi
     
     if [[ "$limit" == "0" ]]; then
         # Remove FPS limit
         if [[ -f "$mangohud_config" ]]; then
-            sed -i '/^fps_limit=/d' "$mangohud_config" 2>/dev/null
+            sed -i '/^fps_limit=/d' "$mangohud_config" 2>/dev/null || true
         fi
         echo "Frame rate limit removed"
     else
         # Set FPS limit
         if [[ -f "$mangohud_config" ]]; then
-            sed -i '/^fps_limit=/d' "$mangohud_config" 2>/dev/null
+            sed -i '/^fps_limit=/d' "$mangohud_config" 2>/dev/null || true
         fi
-        echo "fps_limit=$limit" >> "$mangohud_config"
+        echo "fps_limit=$limit" >> "$mangohud_config" 2>/dev/null \
+            || echo "Warning: could not write $mangohud_config" >&2
+        if [[ -n "$sudo_group" ]]; then
+            chown "$SUDO_USER:$sudo_group" "$mangohud_config" 2>/dev/null || true
+        fi
         echo "MangoHUD frame limit set to ${limit}fps"
     fi
 }
@@ -481,6 +710,9 @@ display_print_status() {
     echo "VRR Status:"
     display_vrr_supported && echo "  VRR: Supported" || echo "  VRR: Not supported"
     display_vrr_enabled && echo "  VRR Enabled: Yes" || echo "  VRR Enabled: No"
+    if display_has_wlr_randr || display_has_kscreen; then
+        display_vrr_active && echo "  VRR Active: Yes" || echo "  VRR Active: No"
+    fi
     if [[ -f "$DISPLAY_VRR_RANGES_FILE" ]]; then
         echo "  VRR Range: $(tr ':' '-' < "$DISPLAY_VRR_RANGES_FILE" 2>/dev/null)Hz"
     fi
@@ -541,23 +773,11 @@ display_get_rrcfg_script() {
 
 set -euo pipefail
 
-# Most display operations require root for DRM access
-requires_elevation() {
-    case "${1:-}" in
-        status|list|help|"") return 1 ;;
-        *) return 0 ;;
-    esac
-}
-
-if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
-    if requires_elevation "${1:-}"; then
-        if sudo -n true 2>/dev/null; then
-            exec sudo -n "$0" "$@"
-        fi
-        echo "rrcfg requires elevated privileges." >&2
-        exit 1
-    fi
-fi
+# rrcfg deliberately never re-execs under sudo: every backend (xrandr,
+# wlr-randr, gdctl, kscreen-doctor) is a compositor/X client, and elevating
+# strips WAYLAND_DISPLAY, XDG_RUNTIME_DIR and XAUTHORITY, so no backend could
+# connect. Nothing here writes DRM state; the library falls back to a per-user
+# config directory when it is not running as root.
 
 # Load display-manager library
 LIB_PATH="/usr/local/share/gz302/strix-halo-lib"
@@ -612,17 +832,18 @@ RRCFG_SCRIPT
 
 # Ensure configuration directory exists
 display_init_config() {
-    mkdir -p "$DISPLAY_CONFIG_DIR"
+    mkdir -p "$DISPLAY_CONFIG_DIR" 2>/dev/null || true
     
     # Set default VRR state if not present
     if [[ ! -f "$DISPLAY_VRR_ENABLED_FILE" ]]; then
-        echo "false" > "$DISPLAY_VRR_ENABLED_FILE"
+        echo "false" > "$DISPLAY_VRR_ENABLED_FILE" 2>/dev/null \
+            || echo "Warning: could not initialize $DISPLAY_VRR_ENABLED_FILE" >&2
     fi
 }
 
 # --- Library Info ---
 display_lib_version() {
-    echo "6.0.0"
+    echo "6.9.0"
 }
 
 display_lib_help() {

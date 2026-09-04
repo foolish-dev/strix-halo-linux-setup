@@ -10,6 +10,18 @@ set -euo pipefail
 
 HOOK_PATH="/usr/lib/systemd/system-sleep/gz302-reset.sh"
 
+# The installer already calls this script as root, and check_root accepts any
+# EUID 0 — including systems with no sudo package installed. Only escalate when
+# we are genuinely not root, so a sudo-less root install still works.
+SUDO=""
+if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
+    if ! command -v sudo >/dev/null 2>&1; then
+        echo "Error: run as root or install sudo." >&2
+        exit 1
+    fi
+    SUDO="sudo"
+fi
+
 get_display_mask_param() {
     echo "amdgpu.dcdebugmask=0x600"
 }
@@ -31,7 +43,7 @@ echo "Will install: $HOOK_PATH"
 echo ""
 
 # --- Install the systemd sleep hook ---
-sudo tee "$HOOK_PATH" > /dev/null << 'HOOKEOF'
+$SUDO tee "$HOOK_PATH" > /dev/null << 'HOOKEOF'
 #!/bin/bash
 # GZ302 Suspend/Resume Hook
 # v3.0 - Comprehensive s2idle fix for Strix Halo
@@ -162,10 +174,26 @@ case "$1" in
             for dev in "$MMC_DRIVER_PATH"/mmc*; do
                 [[ -e "$dev" ]] || continue
                 dev_name=$(basename "$dev")
-                if ! mount | grep -q "^/dev/${dev_name}"; then
+                # Driver-directory entries are MMC bus names ("mmc0:0001"); the
+                # mounted filesystem lives on the block child ("/dev/mmcblk0p1").
+                # Comparing the two namespaces can never match, so resolve the
+                # block devices before deciding it is safe to unbind. Reading
+                # /proc/mounts keeps this pipefail-safe.
+                mmc_mounted=false
+                for blk in "$dev"/block/*; do
+                    [[ -e "$blk" ]] || continue
+                    blk_name=$(basename "$blk")
+                    if grep -qE "^/dev/${blk_name}(p?[0-9]+)? " /proc/mounts; then
+                        mmc_mounted=true
+                        break
+                    fi
+                done
+                if [[ "$mmc_mounted" == "false" ]]; then
                     log "Unbinding $dev_name"
                     echo "$dev_name" >> "$STATE_DIR/mmc-devices"
                     echo "$dev_name" > "$MMC_DRIVER_PATH/unbind" 2>/dev/null || true
+                else
+                    log "Skipping $dev_name — a filesystem is mounted on it"
                 fi
             done
         fi
@@ -272,7 +300,7 @@ esac
 exit 0
 HOOKEOF
 
-sudo chmod +x "$HOOK_PATH"
+$SUDO chmod +x "$HOOK_PATH"
 
 # --- Kernel parameter recommendations ---
 echo ""

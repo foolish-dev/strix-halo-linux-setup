@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 Distribution Manager Library
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This library provides distribution-specific setup orchestration for the GZ302.
 # It coordinates hardware fixes across all subsystem libraries and manages
@@ -58,27 +58,10 @@ distro_apply_hardware_fixes() {
          info "Input devices not detected or library not loaded, skipping."
     fi
 
-    # 4. RGB Configuration
-    info "Configuring RGB Devices..."
-    if declare -f rgb_install_udev_rules >/dev/null; then
-        if rgb_install_udev_rules; then
-            success "RGB udev rules installed"
-        else
-            warning "Failed to install RGB udev rules"
-        fi
-    fi
+    # NOTE: the keyboard RGB udev rule is installed by input_apply_configuration
+    # (step 3), so there is no separate RGB step here.
 
-    # 5. Keyboard Backlight Restore
-    if declare -f rgb_configure_backlight_restore >/dev/null; then
-        rgb_configure_backlight_restore
-    fi
-
-    # 6. Battery Limit (Optional/Fallback)
-    if declare -f power_setup_battery_limit_service >/dev/null; then
-        power_setup_battery_limit_service
-    fi
-
-    # 7. AMD P-State kernel parameter
+    # 4. AMD P-State kernel parameter
     info "Configuring AMD P-State driver..."
     distro_configure_amd_pstate
 
@@ -143,21 +126,34 @@ distro_configure_amd_pstate() {
     local loader_dir="/boot/loader/entries"
     if [[ -d "$loader_dir" ]]; then
         found_any=true
-        local sd_updated=0
+        local sd_updated=0 sd_skipped=0
         local entry
         for entry in "$loader_dir"/*.conf; do
             [[ -f "$entry" ]] || continue
-            if grep -q "^options" "$entry" && ! grep -q "$param" "$entry"; then
-                local entry_backup
-                entry_backup="${entry}.gz302.bak.$(date +%Y%m%d%H%M%S)"
-                cp "$entry" "$entry_backup"
-                sed -i "s/^\(options .*\)$/\1 amd_pstate=guided/" "$entry"
+            grep -q -- "$param" "$entry" && continue
+            # An entry with no 'options' line cannot be extended by the sed below;
+            # counting it as "already present" would hide the parameter never
+            # having been added.
+            if ! grep -q "^options" "$entry"; then
+                warning "systemd-boot entry $(basename "$entry"): no 'options' line — add '${param}' manually"
+                sd_skipped=1
+                continue
+            fi
+            local entry_backup
+            entry_backup="${entry}.gz302.bak.$(date +%Y%m%d%H%M%S)"
+            cp "$entry" "$entry_backup"
+            sed -i "s/^\(options .*\)$/\1 ${param}/" "$entry"
+            if grep -q -- "$param" "$entry"; then
                 sd_updated=1
+            else
+                warning "systemd-boot entry $(basename "$entry"): parameter not applied"
+                rm -f "$entry_backup"
+                sd_skipped=1
             fi
         done
         if [[ $sd_updated -eq 1 ]]; then
             success "systemd-boot entries updated: amd_pstate=guided"
-        else
+        elif [[ $sd_skipped -eq 0 ]]; then
             info "amd_pstate=guided already present in systemd-boot entries"
         fi
     fi
@@ -187,18 +183,41 @@ distro_configure_amd_pstate() {
             info "amd_pstate=guided already present in $(basename "$refind_conf")"
             continue
         fi
+        # Back up only when there is an uncommented 'options' line to extend.
+        # Otherwise the sed is a no-op, the idempotence grep above never starts
+        # matching, and every run drops another backup on the ESP while printing
+        # success for a parameter it did not add.
+        if ! grep -qE '^[[:space:]]*options ' "$refind_conf"; then
+            warning "rEFInd config ${refind_conf}: no 'options' line found — add '${param}' manually"
+            continue
+        fi
         local refind_backup
         refind_backup="${refind_conf}.gz302.bak.$(date +%Y%m%d%H%M%S)"
         cp "$refind_conf" "$refind_backup"
         # Append to every 'options' line (global or stanza-level)
-        sed -i "s|^\(options .*\)$|\1 ${param}|" "$refind_conf"
-        success "rEFInd config updated: amd_pstate=guided"
+        sed -i -E "s|^([[:space:]]*options .*)$|\1 ${param}|" "$refind_conf"
+        if grep -q -- "$param" "$refind_conf" 2>/dev/null; then
+            success "rEFInd config updated: amd_pstate=guided"
+        else
+            warning "rEFInd config ${refind_conf}: parameter not applied — add '${param}' manually"
+            rm -f "$refind_backup"
+        fi
     done
 
     # --- Limine ---
     # Limine commonly uses /etc/default/limine plus limine-update/limine-mkinitcpio,
     # but older/manual installs may still keep kernel parameters in limine.conf.
     local limine_updated=false
+    local limine_generated=false limine_present=false
+    if command -v limine-update >/dev/null 2>&1 || command -v limine-entry-tool >/dev/null 2>&1; then
+        # limine-entry-tool generates $ESP_PATH/limine.conf from its own config
+        # sources, so that file is not a durable write target.
+        limine_generated=true
+        limine_present=true
+    elif [[ -f /etc/limine-entry-tool.conf ]]; then
+        limine_present=true
+    fi
+
     if [[ -f /etc/default/limine ]]; then
         found_any=true
         if grep -q "$param" /etc/default/limine 2>/dev/null; then
@@ -209,33 +228,73 @@ distro_configure_amd_pstate() {
         else
             warning "Failed to update /etc/default/limine for amd_pstate=guided"
         fi
+    elif [[ "$limine_present" == "true" && -f /etc/kernel/cmdline ]] && \
+         declare -f ensure_kcmdline_param >/dev/null 2>&1; then
+        # limine-entry-tool falls back to /etc/kernel/cmdline when KERNEL_CMDLINE
+        # is unset. Appending there keeps root=/rw/rootflags intact, which a
+        # synthesised KERNEL_CMDLINE[default]+= line would replace outright.
+        found_any=true
+        local kc_rc=0
+        ensure_kcmdline_param "$param" || kc_rc=$?
+        case "$kc_rc" in
+            0)  success "/etc/kernel/cmdline updated: amd_pstate=guided"
+                limine_updated=true ;;
+            1)  info "amd_pstate=guided already present in /etc/kernel/cmdline" ;;
+            *)  warning "Failed to update /etc/kernel/cmdline for amd_pstate=guided" ;;
+        esac
+    elif [[ "$limine_present" == "true" ]]; then
+        # Nothing durable to edit: the generated limine.conf is rewritten by the
+        # next limine-update, and seeding /etc/default/limine with only this
+        # parameter would drop root= and leave the machine unbootable.
+        found_any=true
+        warning "Limine detected but no /etc/default/limine or /etc/kernel/cmdline"
+        info "   - The generated limine.conf is overwritten by the next limine-update"
+        info "   - Run: sudo cp /etc/limine-entry-tool.conf /etc/default/limine"
+        info "   - Then set KERNEL_CMDLINE[default] to your current /proc/cmdline plus"
+        info "     '${param}' and run: sudo limine-update"
     fi
 
     # Limine v5+ uses /etc/limine/limine.conf; v4 uses /boot/limine.cfg.
     # Both formats are handled: "cmdline:" (v5 TOML-style) and "CMDLINE=" (v4 uppercase).
+    # /boot/limine.cfg (v4) is always hand-maintained. The v5 limine.conf paths
+    # are only edited on manual installs: where limine-entry-tool is present they
+    # are generated files and any edit is discarded by the next limine-update.
     local limine_cfg
-    for limine_cfg in /etc/limine/limine.conf /boot/limine/limine.conf /boot/limine.cfg /boot/limine.conf; do
+    local limine_paths=("/boot/limine.cfg")
+    if [[ "$limine_generated" == "false" ]]; then
+        limine_paths+=("/etc/limine/limine.conf" "/boot/limine/limine.conf" "/boot/limine.conf")
+    fi
+    for limine_cfg in "${limine_paths[@]}"; do
         [[ -f "$limine_cfg" ]] || continue
         found_any=true
         if grep -q "$param" "$limine_cfg" 2>/dev/null; then
             info "amd_pstate=guided already present in $(basename "$limine_cfg")"
             continue
         fi
-        local limine_backup
-        limine_backup="${limine_cfg}.gz302.bak.$(date +%Y%m%d%H%M%S)"
-        cp "$limine_cfg" "$limine_backup"
-        # v5 TOML-style: "    cmdline: ..." or "cmdline: ..."
+        # Detect the format before backing up, so an unrecognised config does not
+        # leave an orphan backup on the ESP on every run.
+        local limine_expr=""
         if grep -qE '^\s*cmdline\s*:' "$limine_cfg"; then
-            sed -i -E "s|^(\s*cmdline\s*:.*)$|\1 ${param}|" "$limine_cfg"
-        # v4 uppercase: "CMDLINE=..."
-        elif grep -q '^CMDLINE=' "$limine_cfg"; then
-            sed -i "s|^\(CMDLINE=.*\)$|\1 ${param}|" "$limine_cfg"
+            # v5 TOML-style: "    cmdline: ..." or "cmdline: ..."
+            limine_expr="s|^(\s*cmdline\s*:.*)$|\1 ${param}|"
+        elif grep -qE '^[[:space:]]*(KERNEL_)?CMDLINE=' "$limine_cfg"; then
+            # v4 uppercase: "CMDLINE=..." — normally indented inside a :Entry stanza
+            limine_expr="s|^([[:space:]]*(KERNEL_)?CMDLINE=.*)$|\1 ${param}|"
         else
             warning "Limine config ${limine_cfg}: no CMDLINE/cmdline entry found — add '${param}' manually"
             continue
         fi
-        success "Limine configuration updated: amd_pstate=guided"
-        limine_updated=true
+        local limine_backup
+        limine_backup="${limine_cfg}.gz302.bak.$(date +%Y%m%d%H%M%S)"
+        cp "$limine_cfg" "$limine_backup"
+        sed -i -E "$limine_expr" "$limine_cfg"
+        if grep -q -- "$param" "$limine_cfg" 2>/dev/null; then
+            success "Limine configuration updated: amd_pstate=guided"
+            limine_updated=true
+        else
+            warning "Limine config ${limine_cfg}: parameter not applied — add '${param}' manually"
+            rm -f "$limine_backup"
+        fi
     done
 
     if [[ "$limine_updated" == "true" ]] && declare -f limine_regenerate_entries >/dev/null 2>&1; then

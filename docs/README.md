@@ -8,7 +8,7 @@ Documentation for the ASUS ROG Flow Z13 (GZ302) Linux Setup project.
 |----------|-------------|
 | [Kernel Support](technical/kernel-support.md) | Kernel compatibility matrix, troubleshooting |
 | [AI/ML Packages](technical/ai-ml-packages.md) | ROCm, Ollama, PyTorch setup |
-| [ROCm Support](technical/rocm-support.md) | ROCm 7.1.1 configuration |
+| [ROCm Support](technical/rocm-support.md) | ROCm 7.2+ configuration |
 | [Testing Guide](testing-guide.md) | How to test changes |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Obsolescence Analysis](technical/obsolescence-analysis.md) | Component lifecycle status |
@@ -39,12 +39,13 @@ Documentation for the ASUS ROG Flow Z13 (GZ302) Linux Setup project.
 ## Repository Structure
 
 ```text
-GZ302-Linux-Setup/
-├── strix-halo-setup.sh         # Unified installer (v6.8.0)
+strix-halo-linux-setup/
+├── strix-halo-setup.sh         # Unified installer (v6.9.0)
 ├── strix-halo-lib/             # Shared bash libraries
 ├── modules/               # Optional modules (gaming, AI, hypervisor)
 ├── scripts/               # Standalone tools & utilities
 │   └── uninstall/         # Cleanup scripts
+├── tests/                 # Regression checks and version validation helpers
 ├── command-center/        # Python/Qt6 system tray app
 ├── pkg/arch/              # Arch Linux PKGBUILD
 └── docs/                  # Documentation (you are here)
@@ -55,7 +56,8 @@ GZ302-Linux-Setup/
 To pull the latest fixes and apply them:
 
 ```bash
-cd GZ302-Linux-Setup
+git clone https://github.com/foolish-dev/strix-halo-linux-setup.git
+cd strix-halo-linux-setup
 git pull
 sudo bash strix-halo-setup.sh
 ```
@@ -65,6 +67,6 @@ sudo bash strix-halo-setup.sh
 
 ## Getting Help
 
-1. Check [Kernel Support](kernel-support.md) for compatibility issues
+1. Check [Kernel Support](technical/kernel-support.md) for compatibility issues
 2. See [Testing Guide](testing-guide.md) for diagnostic commands
-3. Open an issue: [GitHub Issues](https://github.com/th3cavalry/strix-halo-linux-setup/issues)
+3. Open an issue: [GitHub Issues](https://github.com/foolish-dev/strix-halo-linux-setup/issues)

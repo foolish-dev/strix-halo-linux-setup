@@ -10,9 +10,12 @@ method, trust level, and last verified date.
 
 ## How to Use This Catalog
 
-The Strix Halo Setup installer (`strix-halo-setup.sh`) reads this catalog and
-presents relevant entries for the detected device and distribution.  Each
-entry is **opt-in only** — nothing from this list is installed automatically.
+This catalog is the human-readable reference.  The installer's Community
+Integrations section (`install_community_integrations` in
+`strix-halo-setup.sh`) offers a hardcoded subset of these entries, gated by the
+detected device capabilities — adding an entry here does not by itself add it
+to the installer.  Everything the installer does offer is **opt-in only** —
+nothing from this list is installed automatically.
 
 Trust levels:
 
@@ -190,3 +193,17 @@ To propose a new entry, open a GitHub issue with:
 4. Trust level justification
 
 All entries must include a verified last-tested date and a pinned version reference before being classified as `community-verified`.
+
+Adding an entry here documents the project; it does not surface it in the
+installer.  To also offer an integration during setup, both steps are required:
+
+1. Add the catalog entry above (category, supported devices/distros, install
+   method, trust level, last verified date).
+2. Add the matching prompt and `_install_*` helper to
+   `install_community_integrations()` in `strix-halo-setup.sh`, gated on the
+   relevant capability flag (for example `CAP_Z13CTL` for ASUS-only control
+   tools) so the entry is offered only on devices that support it.
+
+Until the installer gains a parser for a script-friendly manifest (see
+`docs/technical/strix-halo-platform-transition-plan.md`, section 5.1 "Curated
+Catalog"), the installer's list and this catalog are maintained in parallel.

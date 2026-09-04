@@ -2,7 +2,7 @@
 
 **Target Hardware:** ASUS ROG Flow Z13 (GZ302EA-XS99/XS98/XS96) with AMD Ryzen AI MAX+ 395  
 **Last Updated:** May 2026  
-**Kernel Range:** 6.14 - 7.0+
+**Kernel Range:** 6.12 (minimum) - 7.x; 6.14 recommended
 
 ---
 
@@ -17,7 +17,8 @@ uname -r  # Example: 6.19.0-2-cachyos
 
 | Kernel | Status | Required Fixes |
 |--------|--------|----------------|
-| < 6.14 | ❌ Unsupported | Upgrade required |
+| < 6.12 | ❌ Unsupported | Upgrade required |
+| 6.12-6.13 | ⚠️ Minimal | Meets the minimum; MT7925 WiFi and XDNA NPU need 6.14+ |
 | 6.14-6.15 | ⚠️ Early | All hardware fixes needed |
 | 6.16 | ⚠️ Maturing | Most fixes needed |
 | 6.17-6.18 | ✅ Production | Audio quirk only |
@@ -70,18 +71,37 @@ sudo apt-get install linux-generic-hwe-24.04  # Gets 6.17+
 
 ## Kernel 6.17+ Configuration
 
-### Required Kernel Parameters
+### Kernel Parameters the toolkit manages
+
+`amdgpu.ppfeaturemask=0xffff7fff` is applied unconditionally:
 ```
-amd_pstate=guided amdgpu.ppfeaturemask=0xffff7fff
+amdgpu.ppfeaturemask=0xffff7fff
 ```
 
-### AI/LLM Workloads (Optional)
+`amd_pstate=guided` is applied **only** when the machine is not already in
+active/EPP mode — that is, when `/sys/devices/system/cpu/amd_pstate/status` is
+not `active` and `scaling_driver` is not `amd-pstate-epp`:
+```
+amd_pstate=guided
+```
+
+> [!NOTE]
+> On Strix Halo the kernel default is `status=active` / `driver=amd-pstate-epp`,
+> which is the preferred mode: it exposes `energy_performance_preference`, the
+> knob power-profiles-daemon drives. `distro_configure_amd_pstate` leaves such a
+> machine alone rather than downgrading it to `guided`.
+
+### AI/LLM Workloads (Optional, manual)
 ```
 amdgpu.gttsize=131072 amd_iommu=off
 ```
+`gttsize` is expressed in MiB, so `131072` is a **128 GiB** GTT aperture. No
+script in this repository applies it — add it yourself if you need a GTT
+aperture that large for model loading.
 
 ### What Works Natively
-- ✅ WiFi with power saving
+- ✅ WiFi with power saving (the installer no longer writes a NetworkManager
+  `wifi.powersave` override on 6.17+; it only does so below 6.17)
 - ✅ Tablet mode detection
 - ✅ Touchpad/keyboard
 - ✅ GPU stability
@@ -182,7 +202,7 @@ On Limine-managed systems, the installer updates `/etc/default/limine` when pres
 |---------|------|------|------|------|------|-------|
 | AMD XDNA NPU | Basic | Extended | Enhanced | Optimized | Optimized | Optimized |
 | AMD P-State | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| MT7925 WiFi | ⚠️ Workaround | Native | Native | Optimized | Optimized | Optimized |
+| MT7925 WiFi | ⚠️ Workaround | ⚠️ Workaround | ⚠️ Workaround | Native | Native | Native |
 | Radeon 8060S | Basic | Enhanced | Better | Optimized | Optimized | Optimized |
 | Power Mgmt | ✅ | ✅ | ✅ | ✅ Fine-grain | ✅ | ✅ |
 | CS35L41 Audio | ⚠️ Quirks | ⚠️ Quirks | ⚠️ Quirks | ⚠️ Quirks | ⚠️ Quirks | ✅ Native |
@@ -194,4 +214,4 @@ On Limine-managed systems, the installer updates `/etc/default/limine` when pres
 
 - [Kernel.org Releases](https://www.kernel.org/releases.html)
 - [ASUS Linux Community](https://asus-linux.org)
-- [GZ302 Repository](https://github.com/th3cavalry/GZ302-Linux-Setup)
+- [Project Repository](https://github.com/foolish-dev/strix-halo-linux-setup)

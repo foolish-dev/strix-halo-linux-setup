@@ -42,8 +42,8 @@ This is a G-Helper inspired GUI utility that provides a cross-device monitoring 
 ### Step 1: Install Python Dependencies
 
 ```bash
-# Arch/Manjaro (SVG support is bundled in python-pyqt6)
-sudo pacman -S python-pyqt6 python-psutil
+# Arch/Manjaro
+sudo pacman -S python-pyqt6 qt6-svg python-psutil
 
 # Ubuntu/Debian
 sudo apt install python3-pyqt6 python3-pyqt6.qtsvg python3-psutil
@@ -84,7 +84,7 @@ This creates a launcher in your application menu and sets the dashboard to start
 
 ### Blank or Missing Icon
 - **GNOME Users**: Install the "AppIndicator and KStatusNotifierItem Support" extension.
-- **Missing SVG Support**: On Arch, SVG is bundled in `python-pyqt6`. On Debian/Fedora, install `python3-pyqt6.qtsvg` or `python3-qt6-qtsvg`.
+- **Missing SVG Support**: Install the Qt SVG runtime: `qt6-svg` on Arch, `python3-pyqt6.qtsvg` on Debian/Ubuntu, `python3-qt6-qtsvg` on Fedora.
 
 ### Changes Don't Apply
 - On non-ASUS systems, unsupported control widgets are intentionally disabled and the dashboard remains monitoring-only.

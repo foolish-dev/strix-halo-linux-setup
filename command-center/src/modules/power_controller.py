@@ -25,8 +25,9 @@ class PowerController:
 
     def __init__(self, notifier):
         self.notifier = notifier
+        self._last_status_text = ""
         self.available = self.check_available()
-        self.current_profile = self._read_current_profile()
+        self.current_profile = self._read_current_profile(self._last_status_text)
         self._auto_enabled = False
         self._ac_profile = "performance"
         self._battery_profile = "balanced"
@@ -35,12 +36,16 @@ class PowerController:
 
     def check_available(self):
         result = self._run_z13ctl(["z13ctl", "status"], timeout=5)
-        return bool(result and result.returncode == 0)
+        ok = bool(result and result.returncode == 0)
+        # Keep the stdout so callers can read the live profile without paying
+        # for a second z13ctl invocation on every poll.
+        self._last_status_text = result.stdout if ok else ""
+        return ok
 
     def refresh_availability(self):
         self.available = self.check_available()
         if self.available:
-            self.current_profile = self._read_current_profile()
+            self.current_profile = self._read_current_profile(self._last_status_text)
         return self.available
 
     def _notify_unavailable(self, action):
@@ -85,29 +90,112 @@ class PowerController:
             )
         return detail
 
-    def _read_current_profile(self):
-        # Check saved tray profile first — preserves 7-tier names like gaming/maximum
-        # and avoids a slow z13ctl call during startup
+    @staticmethod
+    def _parse_profile(status_text):
+        """Pull the live profile name out of z13ctl status output."""
+        for line in (status_text or "").splitlines():
+            low = line.lower()
+            if "profile" in low and ":" in line:
+                return line.split(":", 1)[1].strip().lower()
+        return None
+
+    def _read_current_profile(self, status_text=None):
+        # Live value first (3-tier: quiet/balanced/performance, or custom once a
+        # TDP override is active). Callers that already ran z13ctl status hand
+        # their stdout in — including an empty one when the call failed, which
+        # is why only status_text=None triggers a fresh call here.
+        live = self._parse_profile(status_text)
+        if live is None and status_text is None:
+            try:
+                result = self._run_z13ctl(["z13ctl", "status"], timeout=5)
+                if result and result.returncode == 0:
+                    live = self._parse_profile(result.stdout)
+            except Exception:
+                pass
+
+        # The saved tray profile preserves 7-tier names like gaming/maximum, but
+        # only while it still agrees with the live one — power-profiles-daemon,
+        # asusd or a plug/unplug can move the platform profile behind our back.
+        cached = None
         try:
             if _PROFILE_CACHE_FILE.exists():
                 val = _PROFILE_CACHE_FILE.read_text().strip()
                 if val in POWER_PROFILES:
-                    return val
+                    cached = val
         except Exception:
             pass
-        # Fall back to z13ctl status (returns 3-tier: quiet/balanced/performance)
+
+        if cached is not None:
+            if live is None:
+                return cached
+            # Anything that is not a firmware profile (z13ctl reports "custom"
+            # after our own tdp --set) is still our tray profile.
+            if live not in ("quiet", "balanced", "performance"):
+                return cached
+            if POWER_PROFILES[cached]["z13ctl_profile"] == live:
+                return cached
+
+        return live or "balanced"
+
+    @staticmethod
+    def _read_sysfs(path):
         try:
-            result = self._run_z13ctl(["z13ctl", "status"], timeout=5)
-            if result and result.returncode == 0:
-                for line in result.stdout.splitlines():
-                    low = line.lower()
-                    if "profile" in low and ":" in line:
-                        return line.split(":", 1)[1].strip().lower()
+            return path.read_text().strip()
+        except OSError:
+            return ""
+
+    @classmethod
+    def _read_hwmon_die_temp(cls, hwmon, labels):
+        """Return the labelled die temperature (°C) of one hwmon device."""
+        unlabelled = None
+        for temp_input in sorted(hwmon.glob("temp*_input")):
+            raw_value = cls._read_sysfs(temp_input)
+            if not raw_value.lstrip("-").isdigit():
+                continue
+            temp_value = int(raw_value) / 1000.0
+            label = cls._read_sysfs(
+                temp_input.with_name(temp_input.name.replace("_input", "_label"))
+            ).lower()
+            if label:
+                if label in labels:
+                    return temp_value
+            elif unlabelled is None:
+                unlabelled = temp_value
+        return unlabelled
+
+    def _read_hwmon_apu_temp(self):
+        """APU temperature from the AMD die sensors, or None when absent.
+
+        k10temp registers a hwmon device and no thermal zone, so the
+        /sys/class/thermal scan below can only ever see ACPI chassis zones.
+        """
+        devices = {}
+        try:
+            for hwmon in sorted(Path("/sys/class/hwmon").glob("hwmon*")):
+                name = self._read_sysfs(hwmon / "name").lower()
+                if name and name not in devices:
+                    devices[name] = hwmon
         except Exception:
-            pass
-        return "balanced"
+            return None
+
+        for driver, labels in (
+            ("k10temp", ("tctl", "tdie")),
+            ("zenpower", ("tctl", "tdie")),
+            ("amdgpu", ("edge",)),
+        ):
+            hwmon = devices.get(driver)
+            if hwmon is None:
+                continue
+            temp_value = self._read_hwmon_die_temp(hwmon, labels)
+            if temp_value is not None:
+                return f"{int(round(temp_value))}°C"
+        return None
 
     def _read_apu_temp(self):
+        hwmon_temp = self._read_hwmon_apu_temp()
+        if hwmon_temp is not None:
+            return hwmon_temp
+
         temps = []
 
         try:
@@ -144,21 +232,38 @@ class PowerController:
         return "--°C"
 
     def _read_fan_summary(self):
-        fan_values = []
+        # Group per hwmon device: several drivers expose inputs for the same
+        # physical fans, so mixing them across devices is arbitrary. 0 RPM is a
+        # valid reading (stopped fans), not a missing sensor.
+        devices = []
 
         try:
-            for hwmon in Path("/sys/class/hwmon").glob("hwmon*"):
-                for fan_input in sorted(hwmon.glob("fan*_input")):
-                    raw_value = fan_input.read_text().strip()
-                    if raw_value.isdigit() and int(raw_value) > 0:
-                        fan_values.append(int(raw_value))
+            hwmons = sorted(Path("/sys/class/hwmon").glob("hwmon*"))
         except Exception:
-            pass
+            hwmons = []
 
-        if not fan_values:
+        for hwmon in hwmons:
+            readings = []
+            for fan_input in sorted(hwmon.glob("fan*_input")):
+                raw_value = self._read_sysfs(fan_input)
+                if raw_value.isdigit():
+                    readings.append(int(raw_value))
+            if readings:
+                devices.append(readings)
+
+        if not devices:
             return "-- RPM"
 
-        return " / ".join(f"{value} RPM" for value in fan_values[:2])
+        # Prefer the device reporting the most spinning fans; fall back to the
+        # one with the most inputs when everything is stopped. sorted() above
+        # keeps the tie-break stable across boots and module load order.
+        spinning = [readings for readings in devices if any(v > 0 for v in readings)]
+        if spinning:
+            best = max(spinning, key=lambda readings: sum(1 for v in readings if v > 0))
+        else:
+            best = max(devices, key=len)
+
+        return " / ".join(f"{value} RPM" for value in best[:2])
 
     def _fallback_status(self):
         return "\n".join([
@@ -271,7 +376,6 @@ class PowerController:
             # Call z13ctl directly (daemon mode handles permissions)
             result = self._run_z13ctl(["z13ctl", "profile", "--set", z13_profile], timeout=30)
             if result and result.returncode == 0:
-                self.notifier.notify_profile_change(profile, result.stdout.strip())
                 self.current_profile = profile
                 # Persist tray-level profile name (survives restarts)
                 try:
@@ -280,12 +384,23 @@ class PowerController:
                 except Exception:
                     pass
                 # Apply TDP override if specified (TDP requires elevated privileges)
+                tdp_applied = True
                 if spec and spec.get("tdp"):
                     tdp_val = spec["tdp"]
                     tdp_cmd = ["z13ctl", "tdp", "--set", str(tdp_val)]
                     if tdp_val > 75:
                         tdp_cmd.append("--force")
-                    self._run_z13ctl(tdp_cmd, timeout=10)
+                    tdp_result = self._run_z13ctl(tdp_cmd, timeout=10)
+                    tdp_applied = bool(tdp_result and tdp_result.returncode == 0)
+                    if not tdp_applied:
+                        self.notifier.notify_error(
+                            "TDP Override Failed", self._result_error(tdp_result)
+                        )
+                # The success toast quotes the profile's wattage, so only send it
+                # once that wattage actually took. The profile switch itself did
+                # succeed either way.
+                if tdp_applied:
+                    self.notifier.notify_profile_change(profile, result.stdout.strip())
                 return True
             else:
                 self.notifier.notify_error("Profile Change Failed", self._result_error(result))

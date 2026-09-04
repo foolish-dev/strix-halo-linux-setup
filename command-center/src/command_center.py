@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Strix Halo Command Center — Strix Halo Edition (v6.8.0)
+Strix Halo Command Center — Strix Halo Edition (v6.9.0)
 Unified Dashboard and System Tray Controller.
 Inspired by G-Helper and Strix-Halo-Control.
 """
@@ -37,7 +37,7 @@ from modules.rgb_controller import RGBController
 from modules.power_controller import PowerController
 
 TRAY_ICON_SIZE = 24
-VERSION = "6.8.0"
+VERSION = "6.9.0"
 DASHBOARD_WINDOW_TITLE = "Strix Halo Dashboard"
 DASHBOARD_WINDOW_ROLE = "strix-halo-dashboard"
 KWIN_DASHBOARD_SCRIPT_NAME = "strix_halo_dashboard_anchor"
@@ -625,7 +625,11 @@ class DashboardWindow(QWidget):
             pass
 
         self._update_profile_buttons()
+        # setChecked() emits toggled(), which is wired to power.set_auto — block
+        # it so a refresh is never mistaken for a click and re-applies a profile.
+        self._auto_btn.blockSignals(True)
         self._auto_btn.setChecked(self.power.is_auto_enabled())
+        self._auto_btn.blockSignals(False)
         self.apply_backend_state()
 
 class CommandCenterApp(QSystemTrayIcon):

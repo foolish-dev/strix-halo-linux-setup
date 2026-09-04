@@ -1,21 +1,19 @@
-# ROCm 7.1.1 Support for GZ302 (AMD Radeon 8060S)
+# ROCm 7.2+ Support for GZ302 (AMD Radeon 8060S)
 
-**Date:** December 9, 2025  
-**ROCm Version:** 7.1.1 (Production) / 7.9.0 (Technology Preview)  
-**GPU:** AMD Radeon 8060S (RDNA 3.5, Strix Halo)
+**ROCm Version:** 7.2+ (native gfx1151) — 7.1.x and older need an HSA override  
+**GPU:** AMD Radeon 8060S (RDNA 3.5, Strix Halo, gfx1151)
 
 ---
 
 ## Overview
 
-ROCm 7.1.1 is the current production release for AMD GPUs. The GZ302's Radeon 8060S (RDNA 3.5 architecture) can leverage ROCm for AI/ML workloads, though official support status depends on AMD's hardware support matrix.
+ROCm 7.2 and newer support the GZ302's Radeon 8060S (RDNA 3.5, `gfx1151`) natively — no `HSA_OVERRIDE_GFX_VERSION` is needed, and `modules/llm.sh` deliberately does not set one there. On ROCm older than 7.2 the GPU is not in the support matrix and `HSA_OVERRIDE_GFX_VERSION=11.0.0` (gfx1100 emulation) is the fallback.
 
 ### Key Information
 
-- **Current Production Release:** ROCm 7.1.1
-- **Technology Preview:** ROCm 7.9.0
-- **Architecture:** RDNA 3.5 (gfx1150 - Strix Halo)
-- **Compute Units:** 16 CUs
+- **Recommended release:** ROCm 7.2+ (native `gfx1151`)
+- **Architecture:** RDNA 3.5 (gfx1151 - Strix Halo)
+- **Compute Units:** 40 CUs
 - **AI/ML Capability:** Yes (via ROCm stack)
 
 ---
@@ -26,15 +24,16 @@ ROCm 7.1.1 is the current production release for AMD GPUs. The GZ302's Radeon 80
 
 The Radeon 8060S (Strix Halo) is part of the RDNA 3.5 generation. ROCm support considerations:
 
-1. **gfx1150 Target:** Strix Halo uses gfx1150 architecture
+1. **gfx1151 Target:** Strix Halo reports `gfx_target_version 110501`, i.e. `gfx1151`
 2. **Consumer GPU:** Radeon 8060S is consumer/mobile, not data center
-3. **ROCm Compatibility:** May work with `HSA_OVERRIDE_GFX_VERSION=11.0.0` for RDNA 3.x compatibility
+3. **ROCm Compatibility:** native on ROCm 7.2+; on ROCm < 7.2 use `HSA_OVERRIDE_GFX_VERSION=11.0.0` for gfx1100 compatibility
 
 ### Support Matrix
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| ROCm 7.1.1 Runtime | ⚠️ Unofficial | Consumer GPU, may need overrides |
+| ROCm 7.2+ Runtime | ✅ Native | `gfx1151` supported directly, no override |
+| ROCm < 7.2 Runtime | ⚠️ Unofficial | Needs `HSA_OVERRIDE_GFX_VERSION=11.0.0` |
 | PyTorch with ROCm | ✅ Supported | Via gfx1100 compatibility mode |
 | TensorFlow with ROCm | ✅ Supported | Via gfx1100 compatibility mode |
 | Ollama with ROCm | ✅ Supported | Works with override |
@@ -56,6 +55,7 @@ sudo pacman -S rocm-hip-runtime rocm-opencl-runtime
 sudo pacman -S rocm-hip-sdk rocm-opencl-sdk
 
 # Set environment variables
+# Only on ROCm < 7.2 — on 7.2+ leave HSA_OVERRIDE_GFX_VERSION unset
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
 export ROCM_PATH=/opt/rocm
 ```
@@ -69,7 +69,7 @@ sudo apt install ./amdgpu-install_6.3.60300-1_all.deb
 # Install ROCm
 sudo amdgpu-install --usecase=rocm
 
-# Set environment
+# Set environment (ROCm < 7.2 only)
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
 ```
 
@@ -100,6 +100,11 @@ docker run -it --device=/dev/kfd --device=/dev/dri \
     rocm/pytorch:rocm7.1.1_ubuntu22.04_py3.10_pytorch_release_2.3.0
 ```
 
+> [!NOTE]
+> Published `rocm/pytorch` tags lag the ROCm release. A pre-7.2 image such as the
+> one above still needs `HSA_OVERRIDE_GFX_VERSION=11.0.0` set inside the
+> container; a 7.2+ image does not.
+
 ---
 
 ## Environment Configuration
@@ -114,7 +119,9 @@ export ROCM_PATH=/opt/rocm
 export PATH=$ROCM_PATH/bin:$PATH
 export LD_LIBRARY_PATH=$ROCM_PATH/lib:$LD_LIBRARY_PATH
 
-# GPU Override for RDNA 3.5 (gfx1150)
+# GPU override for RDNA 3.5 (gfx1151) — ROCm < 7.2 ONLY.
+# On ROCm 7.2+ leave this unset: gfx1151 is supported natively and the override
+# pins the APU into gfx1100 emulation.
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
 
 # Optional: Performance tuning
@@ -140,16 +147,16 @@ python3 -c "import torch; print(f'ROCm available: {torch.cuda.is_available()}');
 
 ## Known Issues and Workarounds
 
-### Issue 1: gfx1150 Not in Official Support List
+### Issue 1: gfx1151 Not in the Official Support List (ROCm < 7.2)
 
-**Problem:** Radeon 8060S (gfx1150) may not be in ROCm's official support matrix.
+**Problem:** on ROCm older than 7.2 the Radeon 8060S (`gfx1151`) is not in the support matrix.
 
-**Workaround:**
+**Workaround (ROCm < 7.2 only):**
 ```bash
 export HSA_OVERRIDE_GFX_VERSION=11.0.0
 ```
 
-This tells ROCm to treat the GPU as gfx1100 (RDNA 3.0), which is officially supported.
+This tells ROCm to treat the GPU as gfx1100 (RDNA 3.0), which is officially supported. Do **not** set it on ROCm 7.2+, where `gfx1151` is native.
 
 ### Issue 2: Ollama ROCm Detection
 
@@ -193,8 +200,8 @@ ollama run llama3.1:8b --ctx-size 4096
 
 ### Radeon 8060S Specifications
 
-- **Compute Units:** 16 CUs
-- **Stream Processors:** 1024 (16 CUs × 64 SP/CU)
+- **Compute Units:** 40 CUs
+- **Stream Processors:** 2560 (40 CUs × 64 SP/CU)
 - **Memory:** Shared system RAM (up to 128GB on GZ302EA-XS99)
 - **Memory Bandwidth:** ~102.4 GB/s (shared with CPU)
 - **TFLOPs (FP32):** ~10.5 TFLOPS
@@ -245,29 +252,29 @@ ollama run llama3.1:8b --ctx-size 4096
 
 ## Integration with GZ302 Toolkit
 
-### gz302-llm.sh Updates
+### AI / LLM module
 
-The `gz302-llm.sh` module has been updated to support ROCm 7.1.1:
+The AI/LLM module is `modules/llm.sh`, dispatched from the installer:
 
 ```bash
-# Install LLM tools with ROCm 7.1.1
-sudo ./gz302-llm.sh
+# Install LLM tools (choose the AI / LLM section)
+sudo ./strix-halo-setup.sh
 
 # Features:
 # - Ollama with ROCm support
-# - PyTorch with ROCm 7.1.1
+# - PyTorch with ROCm
 # - bitsandbytes for RDNA 3
-# - Environment variable setup
-# - Automatic GPU detection
+# - Environment variable setup (/etc/profile.d/strix-halo-rocm.sh)
+# - Automatic ROCm version detection (no HSA override on 7.2+)
 ```
 
 ### Automatic Configuration
 
 The setup script automatically:
 1. Detects Radeon 8060S
-2. Installs ROCm 7.1.1 runtime
-3. Configures environment variables
-4. Sets up HSA_OVERRIDE_GFX_VERSION
+2. Installs the distribution's ROCm runtime
+3. Configures environment variables in `/etc/profile.d/strix-halo-rocm.sh`
+4. Sets `HSA_OVERRIDE_GFX_VERSION=11.0.0` **only** when ROCm is older than 7.2
 5. Tests GPU detection
 
 ---
@@ -278,7 +285,7 @@ The setup script automatically:
 
 ```bash
 #!/bin/bash
-echo "=== ROCm 7.1.1 Setup Test ==="
+echo "=== ROCm 7.2+ Setup Test ==="
 echo
 
 # 1. Check ROCm installation
@@ -335,7 +342,7 @@ fi
 
 ### Official Documentation
 
-- **ROCm 7.1.1 Docs:** https://rocm.docs.amd.com/en/docs-7.1.1/
+- **ROCm Docs:** https://rocm.docs.amd.com/
 - **ROCm GitHub:** https://github.com/ROCm/ROCm
 - **PyTorch ROCm:** https://pytorch.org/get-started/locally/
 
@@ -347,34 +354,34 @@ fi
 
 ### GZ302-Specific
 
-- **gz302-llm.sh:** Automated LLM setup with ROCm
-- **Info/AI_ML_PACKAGES.md:** AI/ML package documentation
-- **Info/KERNEL_COMPATIBILITY.md:** Kernel requirements
+- **`modules/llm.sh`:** Automated LLM setup with ROCm
+- **[AI/ML Packages](ai-ml-packages.md):** AI/ML package documentation
+- **[Kernel Support](kernel-support.md):** Kernel requirements
 
 ---
 
 ## Changelog
 
 ### v1.0 (December 9, 2025)
-- Initial ROCm 7.1.1 support documentation
-- Radeon 8060S (gfx1150) configuration
+- Initial ROCm support documentation
+- Radeon 8060S (gfx1151) configuration
 - Environment variable setup
 - Known issues and workarounds
 - Performance expectations
-- Integration with gz302-llm.sh
+- Integration with `modules/llm.sh`
 
 ---
 
 ## Summary
 
-ROCm 7.1.1 can work with the Radeon 8060S using the `HSA_OVERRIDE_GFX_VERSION=11.0.0` workaround. While not officially supported as a consumer/mobile GPU, it provides good AI/ML performance for:
+ROCm 7.2+ supports the Radeon 8060S (`gfx1151`) natively. Older ROCm releases can still be used with the `HSA_OVERRIDE_GFX_VERSION=11.0.0` gfx1100 fallback. Either way it provides good AI/ML performance for:
 
 - LLM inference (7B-13B models) via Ollama
 - PyTorch model training and inference
 - Stable Diffusion image generation
 - General GPU-accelerated compute
 
-**Recommendation:** Use ROCm 7.1.1 for AI/ML workloads on the GZ302. The setup is straightforward, performance is good, and the `gz302-llm.sh` module automates the installation.
+**Recommendation:** Use ROCm 7.2 or newer for AI/ML workloads on the GZ302 so the GPU runs as native `gfx1151`. The `modules/llm.sh` module automates the installation and picks the right configuration for the ROCm version it finds.
 
 ---
 

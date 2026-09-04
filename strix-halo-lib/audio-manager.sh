@@ -3,18 +3,20 @@
 set -euo pipefail
 
 # ==============================================================================
-# GZ302 Audio Manager Library
-# Version: 6.8.0
+# Strix Halo Audio Manager Library
+# Version: 6.9.0
 #
-# This library manages audio configuration for the GZ302, including:
+# This library manages audio configuration for the supported Strix Halo device
+# matrix, including:
 # - Sound Open Firmware (SOF) installation
 # - Cirrus Logic CS35L41 smart amplifier detection and configuration
 # - ALSA state management
 # - Audio quirks and workarounds
 #
-# Key Components:
-# - Realtek ALC294 codec
-# - Dual Cirrus Logic CS35L41 amplifiers (I2C connected)
+# Key Components (device-dependent):
+# - HDA codec (Realtek ALC294 on the ASUS GZ302)
+# - Cirrus Logic CS35L41 smart amplifiers, ACPI HID CSC3551 (I2C or SPI
+#   attached); absent on the desktop/mini-PC profiles
 # - SOF DSP firmware
 #
 # Usage:
@@ -69,7 +71,7 @@ audio_detect_cs35l41() {
 # Get audio subsystem ID
 # Returns: Subsystem ID or "unknown"
 audio_get_subsystem_id() {
-    # GZ302 should have subsystem ID 1043:1fb3.
+    # The GZ302 reports subsystem ID 1043:1fb3; other boards report their own.
     # Enumerate the audio-class functions (0403) rather than opening a -A 10 window
     # at the first line that merely contains "audio": on Strix Halo the HDMI/DP
     # audio function comes first and reports the generic AMD subsystem 1002:1640,
@@ -158,8 +160,11 @@ audio_ucm_installed() {
 # Check if CS35L41 configuration is applied
 # Returns: 0 if applied, 1 if not
 audio_cs35l41_config_applied() {
+    # Only files written by this tool count: match either the softdep line we
+    # emit or our marker comment, so a hand-written cs35l41.conf using
+    # options/blacklist is never mistaken for ours.
     if [[ -f /etc/modprobe.d/cs35l41.conf ]]; then
-        if grep -q "softdep snd_hda_intel" /etc/modprobe.d/cs35l41.conf 2>/dev/null; then
+        if grep -q "softdep snd_hda_intel\|# Managed by strix-halo-setup" /etc/modprobe.d/cs35l41.conf 2>/dev/null; then
             return 0
         fi
     fi
@@ -255,54 +260,44 @@ audio_install_sof_firmware() {
         return 0
     fi
     
-    echo "Installing Sound Open Firmware (SOF) for GZ302EA audio..."
+    echo "Installing Sound Open Firmware (SOF)..."
     
+    # Package names differ per distribution; alsa-ucm-conf/alsa-ucm is needed
+    # regardless of SOF, so the packages are installed one at a time - apt-get,
+    # dnf and zypper all abort the whole transaction on a single unknown name.
+    local -a pkgs=() cmd=()
     case "$distro" in
-        arch)
-            # Install SOF firmware from official Arch repos
-            if pacman -S --noconfirm --needed sof-firmware alsa-ucm-conf 2>/dev/null; then
-                echo "SOF firmware installed from official repositories"
-                return 0
-            else
-                echo "WARNING: SOF firmware installation failed - audio may not work optimally"
-                return 1
-            fi
-            ;;
-        debian|ubuntu)
-            # Install SOF firmware from Ubuntu repos
-            if apt-get install -y sof-firmware alsa-ucm-conf 2>/dev/null; then
-                echo "SOF firmware installed"
-                return 0
-            else
-                echo "WARNING: SOF firmware installation failed - audio may not work optimally"
-                return 1
-            fi
-            ;;
-        fedora)
-            # Install SOF firmware from Fedora repos
-            if dnf install -y sof-firmware alsa-sof-firmware alsa-ucm 2>/dev/null; then
-                echo "SOF firmware installed"
-                return 0
-            else
-                echo "WARNING: SOF firmware installation failed - audio may not work optimally"
-                return 1
-            fi
-            ;;
-        opensuse)
-            # Install SOF firmware from OpenSUSE repos
-            if zypper install -y sof-firmware alsa-ucm-conf 2>/dev/null; then
-                echo "SOF firmware installed"
-                return 0
-            else
-                echo "WARNING: SOF firmware installation failed - audio may not work optimally"
-                return 1
-            fi
-            ;;
+        arch)          pkgs=(sof-firmware alsa-ucm-conf);        cmd=(pacman -S --noconfirm --needed) ;;
+        debian|ubuntu) pkgs=(firmware-sof-signed alsa-ucm-conf); cmd=(apt-get install -y) ;;
+        fedora)        pkgs=(alsa-sof-firmware alsa-ucm);        cmd=(dnf install -y) ;;
+        opensuse)      pkgs=(sof-firmware alsa-ucm-conf);        cmd=(zypper install -y) ;;
         *)
             echo "ERROR: Unsupported distribution: $distro"
             return 1
             ;;
     esac
+    
+    local p installed=0 failed=0
+    for p in "${pkgs[@]}"; do
+        if "${cmd[@]}" "$p"; then
+            installed=$((installed + 1))
+        else
+            failed=$((failed + 1))
+            echo "WARNING: could not install $p (continuing)"
+        fi
+    done
+    
+    if [[ $failed -eq 0 ]]; then
+        echo "SOF firmware and ALSA UCM installed"
+        return 0
+    fi
+    if [[ $installed -gt 0 ]]; then
+        echo "WARNING: SOF firmware installation incomplete - audio may not work optimally"
+        return 0
+    fi
+    
+    echo "WARNING: SOF firmware installation failed - audio may not work optimally"
+    return 1
 }
 
 # --- Configuration Application (Idempotent) ---
@@ -321,13 +316,18 @@ audio_apply_cs35l41_config() {
         return 0  # Already configured
     fi
     
-    # Apply configuration
-    cat > /etc/modprobe.d/cs35l41.conf <<'EOF'
-# Cirrus Logic CS35L41 amplifiers - ASUS ROG Flow Z13 GZ302
-# Subsystem ID: 1043:1fb3
-# The cs35l41_hda ASoC bridge driver manages these amps via ACPI/I2C.
-# Load cs35l41_hda after snd_hda_intel so the HDA bus is ready.
-softdep snd_hda_intel post: cs35l41_hda
+    # Apply configuration. The side-codec module is named for the bus the amps
+    # sit on (snd-hda-scodec-cs35l41-{i2c,spi}); there has never been a module
+    # called "cs35l41_hda", so a softdep naming it is silently dropped.
+    local amp_mod="snd_hda_scodec_cs35l41_i2c"
+    if compgen -G '/sys/bus/spi/devices/*CSC3551*' >/dev/null 2>&1; then
+        amp_mod="snd_hda_scodec_cs35l41_spi"
+    fi
+    cat > /etc/modprobe.d/cs35l41.conf <<EOF
+# Managed by strix-halo-setup - Cirrus Logic CS35L41 smart amplifiers
+# Enumerated from ACPI HID CSC3551 by serial_multi_instantiate; the side-codec
+# driver autoloads off the i2c/spi modalias. This only pins load order.
+softdep snd_hda_intel post: ${amp_mod}
 EOF
     
     return 0
@@ -354,7 +354,7 @@ audio_enable_alsa_state() {
 audio_apply_configuration() {
     local distro="${1:-}"
     
-    echo "Configuring audio for GZ302..."
+    echo "Configuring audio..."
     
     # Install SOF firmware if distribution provided
     if [[ -n "$distro" ]]; then
@@ -369,11 +369,20 @@ audio_apply_configuration() {
         kver=$(kernel_get_version_num)
     fi
 
-    if [[ $kver -ge 619 ]]; then
-        echo "Kernel 6.19+ detected: Using native CS35L41 support"
+    local audio_native="${KERNEL_AUDIO_NATIVE:-619}"
+    if [[ $kver -ge $audio_native ]]; then
+        echo "Kernel $((audio_native / 100)).$((audio_native % 100))+ detected: Using native CS35L41 support"
+        # Only remove a cs35l41.conf this tool wrote - the same path is the
+        # conventional home for hand-written CS35L41 workarounds.
         if [[ -f /etc/modprobe.d/cs35l41.conf ]]; then
-            rm -f /etc/modprobe.d/cs35l41.conf
-            echo "Removed obsolete CS35L41 quirk configuration"
+            if audio_cs35l41_config_applied; then
+                mv -f /etc/modprobe.d/cs35l41.conf \
+                      /etc/modprobe.d/cs35l41.conf.bak 2>/dev/null || \
+                    rm -f /etc/modprobe.d/cs35l41.conf
+                echo "Removed obsolete CS35L41 quirk configuration (backup: cs35l41.conf.bak)"
+            else
+                echo "Leaving user-provided /etc/modprobe.d/cs35l41.conf untouched"
+            fi
         fi
     elif audio_detect_cs35l41; then
         echo "Cirrus Logic CS35L41 amplifier detected"
@@ -456,16 +465,20 @@ audio_print_status() {
     sof_firmware=$(echo "$state" | grep "sof_firmware_installed" | cut -d'"' -f4)
     cs35l41_config=$(echo "$state" | grep "cs35l41_config_applied" | cut -d'"' -f4)
     
-    echo "Audio Status (GZ302EA):"
+    echo "Audio Status:"
     echo "  Controller:          $controller_detected"
     echo "  CS35L41 Amplifiers:  $cs35l41_detected"
     echo "  Subsystem ID:        $subsystem_id"
     echo "  SOF Firmware:        $sof_firmware"
     echo "  CS35L41 Config:      $cs35l41_config"
     
-    # Check for expected subsystem ID
-    if [[ "$subsystem_id" != "1043:1fb3" && "$subsystem_id" != "unknown" ]]; then
-        echo "  ⚠️  WARNING: Unexpected subsystem ID (expected 1043:1fb3)"
+    # Check for expected subsystem ID. Only the GZ302 has a known-good value;
+    # every other profile in the matrix reports its own board ID, so warning
+    # unconditionally would flag correct hardware.
+    local expected_id=""
+    [[ "${DEVICE_MODEL:-}" == *"GZ302"* ]] && expected_id="1043:1fb3"
+    if [[ -n "$expected_id" && "$subsystem_id" != "$expected_id" && "$subsystem_id" != "unknown" ]]; then
+        echo "  ⚠️  WARNING: Unexpected subsystem ID (expected $expected_id)"
     fi
     
     # Check for missing components
@@ -495,7 +508,7 @@ audio_lib_version() {
 
 audio_lib_help() {
     cat <<'HELP'
-GZ302 Audio Manager Library v3.0.0
+Strix Halo Audio Manager Library v3.0.0
 
 Detection Functions (read-only):
   audio_detect_controller       - Check if audio controller present
@@ -545,11 +558,12 @@ Example Usage:
   # Check status
   audio_print_status
 
-Audio Hardware:
-  Codec: Realtek ALC294
-  Amplifiers: Dual Cirrus Logic CS35L41 (I2C)
+Audio Hardware (varies by device):
+  Codec: HDA codec (Realtek ALC294 on the ASUS GZ302)
+  Amplifiers: Cirrus Logic CS35L41, ACPI HID CSC3551 (I2C or SPI attached);
+              not present on the desktop / mini-PC profiles
   Firmware: Sound Open Firmware (SOF)
-  Subsystem ID: 1043:1fb3 (ASUS ROG Flow Z13)
+  Subsystem ID: board-specific (1043:1fb3 on the ASUS ROG Flow Z13 GZ302)
 
 Design Principles:
   - Idempotent: Safe to run multiple times

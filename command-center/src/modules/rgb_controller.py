@@ -3,7 +3,7 @@ import subprocess
 import threading
 import queue
 from pathlib import Path
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QObject, pyqtSignal
 
 # Speed mapping: internal numeric → z13ctl speed names
 _SPEED_MAP = {1: "slow", 2: "normal", 3: "fast"}
@@ -18,11 +18,19 @@ def get_z13ctl_socket():
 _Z13CTL_SOCKET = get_z13ctl_socket()
 
 
-class RGBController:
+class RGBController(QObject):
     """Manages Keyboard and Lightbar RGB control via z13ctl."""
 
+    # Command results are reported from the queue worker thread, which has no
+    # Qt event dispatcher. These signals marshal them back onto the GUI thread.
+    _notify = pyqtSignal(str, str, str, int)
+    _notify_err = pyqtSignal(str, str)
+
     def __init__(self, notifier):
+        super().__init__()
         self.notifier = notifier
+        self._notify.connect(self.notifier.notify)
+        self._notify_err.connect(self.notifier.notify_error)
         self.window_animation_thread = None
         self.window_animation_stop = None
         # Command queue for thread-safe serialization
@@ -108,30 +116,28 @@ class RGBController:
                 )
 
             if res.returncode == 0:
-                QTimer.singleShot(0, lambda: self.notifier.notify("RGB", success_msg, "success", 2000))
+                self._notify.emit("RGB", success_msg, "success", 2000)
             else:
                 err_detail = (
                     res.stderr.strip() or res.stdout.strip() or "Unknown error"
                 )
                 if "permission" in err_detail.lower():
                     hint = "Check z13ctl setup: sudo z13ctl setup"
-                    msg = f"{error_msg}\n{hint}"
-                    QTimer.singleShot(0, lambda m=msg: self.notifier.notify_error("RGB Error", m))
+                    self._notify_err.emit("RGB Error", f"{error_msg}\n{hint}")
                 else:
-                    msg = f"{error_msg}: {err_detail[:100]}"
-                    QTimer.singleShot(0, lambda m=msg: self.notifier.notify_error("RGB Error", m))
+                    self._notify_err.emit(
+                        "RGB Error", f"{error_msg}: {err_detail[:100]}"
+                    )
         except subprocess.TimeoutExpired:
-            msg = f"{error_msg}: Command timed out"
-            QTimer.singleShot(0, lambda m=msg: self.notifier.notify_error("RGB Error", m))
+            self._notify_err.emit("RGB Error", f"{error_msg}: Command timed out")
         except FileNotFoundError:
-            QTimer.singleShot(0, lambda: self.notifier.notify_error(
+            self._notify_err.emit(
                 "RGB Error", "z13ctl not found. Run strix-halo-setup.sh"
-            ))
+            )
             self.keyboard_available = False
             self.window_available = False
         except Exception as e:
-            msg = str(e)[:100]
-            QTimer.singleShot(0, lambda m=msg: self.notifier.notify_error("RGB Error", m))
+            self._notify_err.emit("RGB Error", str(e)[:100])
 
     def _process_queue(self):
         """Process RGB commands from queue sequentially."""

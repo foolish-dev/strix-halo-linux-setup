@@ -1,7 +1,7 @@
 # Strix Halo Linux Setup
 
-![Version](https://img.shields.io/badge/version-6.8.0-blue?style=for-the-badge)
-![Kernel](https://img.shields.io/badge/Kernel-6.14%2B-orange?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-6.9.0-blue?style=for-the-badge)
+![Kernel](https://img.shields.io/badge/Kernel-6.12%2B-orange?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-AMD%20Strix%20Halo-red?style=for-the-badge)
 
@@ -41,7 +41,7 @@ Supports the known Strix Halo device matrix below plus other confirmed Strix Hal
 One script handles everything. It auto-detects your hardware and selects the relevant sections:
 
 ```bash
-curl -L https://raw.githubusercontent.com/th3cavalry/strix-halo-linux-setup/main/strix-halo-setup.sh -o strix-halo-setup.sh
+curl -L https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main/strix-halo-setup.sh -o strix-halo-setup.sh
 chmod +x strix-halo-setup.sh
 sudo ./strix-halo-setup.sh
 ```
@@ -97,10 +97,24 @@ On ASUS devices where `z13ctl` is supported, the installer creates `pwrcfg` and 
 
 | Command | Maps to |
 | :--- | :--- |
-| `z13ctl status` | `z13ctl status` |
-| `z13ctl profile --set quiet` | `z13ctl profile --set quiet` |
-| `z13ctl tdp --set 50` | `z13ctl tdp --set 50` |
-| `z13ctl apply --mode rainbow` | `z13ctl apply --mode rainbow` |
+| `pwrcfg status` | `z13ctl status` |
+| `pwrcfg silent` (alias `quiet`) | `z13ctl profile --set quiet` |
+| `pwrcfg balanced` | `z13ctl profile --set balanced` |
+| `pwrcfg performance` | `z13ctl profile --set performance` |
+| `pwrcfg gaming` (aliases `turbo`, `max`) | `z13ctl profile --set performance` |
+| `pwrcfg custom` | `z13ctl profile --set custom` |
+| `pwrcfg auto` | `balanced` on AC, `quiet` on battery |
+| `pwrcfg tdp --set 50` | `z13ctl tdp --set 50` |
+| `pwrcfg fan --get` (alias `fancurve`) | `z13ctl fancurve --get` |
+| `pwrcfg battery --set 80` | `z13ctl batterylimit --set 80` |
+| `gz302-rgb static <color> [brightness]` | `z13ctl apply --mode static --color <color> --brightness <level>` |
+| `gz302-rgb breathe <c1> <c2> [speed]` | `z13ctl apply --mode breathe --color <c1> --color2 <c2> --speed <speed>` |
+| `gz302-rgb cycle\|rainbow\|strobe [speed]` | `z13ctl apply --mode <mode> --speed <speed>` |
+| `gz302-rgb brightness <level>` | `z13ctl brightness <level>` |
+| `gz302-rgb off` | `z13ctl off` |
+| `gz302-rgb colors` (alias `list`) | `z13ctl apply --list-colors` |
+
+Independently of z13ctl, every device that gets the Strix Halo dashboard also gets `rrcfg`, a refresh-rate control generated from `strix-halo-lib/display-manager.sh` (installed by `install_display_tools`, gated on `CAP_DASHBOARD`).
 
 ---
 
@@ -124,7 +138,8 @@ The scripts automatically detect your kernel and adapt:
 
 | Kernel | Status |
 | :--- | :--- |
-| **< 6.14** | Unsupported — please upgrade |
+| **< 6.12** | Unsupported — please upgrade |
+| **6.12 – 6.13** | Minimal — meets the minimum, but MT7925 WiFi and XDNA NPU support need 6.14+ |
 | **6.14 – 6.16** | Applies workarounds for WiFi (MT7925), Touchpad, Tablet mode |
 | **6.17+** | Native support — cleans up obsolete fixes, focuses on tuning |
 
@@ -147,7 +162,7 @@ The scripts automatically detect your kernel and adapt:
 ## Repository Structure
 
 ```text
-GZ302-Linux-Setup/
+strix-halo-linux-setup/
 ├── strix-halo-setup.sh             # Unified installer (single entry point)
 ├── strix-halo-lib/                 # Core libraries (manager-based)
 │   ├── utils.sh               # Shared utilities, logging, backups
@@ -159,11 +174,11 @@ GZ302-Linux-Setup/
 ├── scripts/                   # System scripts and repo sync helpers
 ├── tests/                     # Regression checks and version validation helpers
 ├── command-center/            # PyQt6 system tray application
-├── docs/                      # User guides and changelogs
-│   └── technical/             # Hardware research and obsolescence analysis
-│       ├── external-integrations-catalog.md  # Strix Halo ecosystem catalog (NEW)
-│       └── strix-halo-platform-transition-plan.md
-└── legacy/                    # Deprecated and replaced scripts
+├── pkg/arch/                  # Arch PKGBUILD
+└── docs/                      # User guides and changelogs
+    └── technical/             # Hardware research and obsolescence analysis
+        ├── external-integrations-catalog.md  # Strix Halo ecosystem catalog (NEW)
+        └── strix-halo-platform-transition-plan.md
 ```
 
 ---
@@ -212,8 +227,8 @@ This removes all GZ302 tools, z13ctl daemon/config, systemd services, udev rules
 
 - **Documentation:** See the [docs/](docs/) directory for user guides and [docs/technical/](docs/technical/) for hardware research.
 - **AI Guidelines:** Strict rules for LLM/Copilot contributions are in [.github/copilot-instructions.md](.github/copilot-instructions.md).
-- **Issues:** Report bugs on the [Issues page](https://github.com/th3cavalry/strix-halo-linux-setup/issues).
+- **Issues:** Report bugs on the [Issues page](https://github.com/foolish-dev/strix-halo-linux-setup/issues).
 - **Development:** See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **License:** MIT
-**Maintained by:** th3cavalry
+**Maintained by:** [foolish-dev](https://github.com/foolish-dev) — fork of th3cavalry's GZ302-Linux-Setup

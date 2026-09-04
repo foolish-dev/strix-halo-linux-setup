@@ -142,6 +142,14 @@ main() {
     remove_file "/usr/local/bin/gz302-rgb-window"
     remove_file "/usr/local/bin/gz302-rgb-restore"
     
+    # Control helper (installed by _install_strix_halo_control)
+    remove_file "/usr/local/bin/strix-halo-control"
+    remove_dir "/opt/strix-halo-control"
+    
+    # AI/LLM module helpers
+    remove_file "/usr/local/bin/textgen-webui"
+    remove_dir "/opt/strix-halo-vllm"
+    
     # Legacy/Misc
     remove_file "/usr/local/bin/gz302-folio-resume.sh"
     remove_file "/usr/lib/systemd/system-sleep/gz302-kbd-backlight"
@@ -150,6 +158,7 @@ main() {
     echo
     info "Removing Command Center / GUI..."
     remove_dir "/usr/local/share/gz302"
+    remove_dir "/usr/local/share/strix-halo"
     remove_file "/usr/local/bin/strix-halo-control-center"
     remove_file "/usr/share/applications/strix-halo-control-center.desktop"
     remove_file "/etc/xdg/autostart/strix-halo-control-center.desktop"
@@ -160,6 +169,7 @@ main() {
         remove_file "$home/.config/autostart/strix-halo-control-center.desktop"
         remove_file "$home/.config/autostart/strix-halo-tray.desktop"
         remove_file "$home/.local/share/applications/strix-halo-tray.desktop"
+        remove_file "$home/.local/share/icons/hicolor/scalable/apps/strix-halo-power-manager.svg"
     done
     
     echo
@@ -187,10 +197,16 @@ main() {
     remove_file "/etc/udev/rules.d/99-gz302-rgb.rules"
     remove_file "/etc/udev/rules.d/99-gz302-keyboard.rules" # Legacy
 
+    # Udev hwdb (Copilot key remap) — the compiled hwdb.bin keeps the property
+    # until it is rebuilt, so removing the source alone leaves the key remapped.
+    remove_file "/etc/udev/hwdb.d/90-gz302-remap.hwdb"
+
     # NetworkManager configuration
     remove_file "/etc/NetworkManager/conf.d/wifi-powersave.conf"
 
+    systemd-hwdb update || true
     udevadm control --reload || true
+    udevadm trigger --subsystem-match=input || true
     
     # Modprobe configs
     remove_file "/etc/modprobe.d/mt7925.conf"
@@ -198,6 +214,15 @@ main() {
     remove_file "/etc/modprobe.d/hid-asus.conf"
     remove_file "/etc/modprobe.d/i2c-hid-acpi-gz302.conf"
     remove_file "/etc/modprobe.d/cs35l41.conf"
+    
+    # Module-written system configuration (AI/LLM and gaming modules)
+    remove_file "/etc/profile.d/strix-halo-rocm.sh"
+    remove_file "/etc/sysctl.d/99-gaming.conf"
+    remove_file "/etc/security/limits.d/99-xrt.conf"
+    remove_file "/etc/systemd/system/ollama.service.d/strix-halo.conf"
+    if [[ -d "/etc/systemd/system/ollama.service.d" ]]; then
+        rmdir --ignore-fail-on-non-empty "/etc/systemd/system/ollama.service.d"
+    fi
     
     # ASUS Daemon override
     remove_file "/etc/systemd/system/asusd.service.d/gz302-lightbar.conf"

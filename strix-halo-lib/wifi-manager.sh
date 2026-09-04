@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 WiFi Manager Library
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This library provides hardware detection, configuration, and management
 # functions for the MediaTek MT7925e WiFi controller in the GZ302.
@@ -29,12 +29,23 @@ set -euo pipefail
 # Returns: 0 if found, 1 if not found
 # Output: PCI device information if found
 wifi_detect_hardware() {
-    # Match on the adapter name as well as the PCI IDs. 14c3:0616/0617 are MT7922
-    # parts; the MT7925 in the GZ302EA enumerates as 14c3:7925, so keying on a
-    # single hardcoded ID misses the very adapter this library exists to configure.
+    # Ask the kernel first: any PCI device bound to the mt76 PCIe drivers. This
+    # needs no pciutils and covers every present and future SKU, including the
+    # MT7925-family IDs (14c3:0717/7927/6639/0738) that a hand-typed list misses.
+    local u drv device_info
+    for u in /sys/bus/pci/devices/*/uevent; do
+        [[ -r "$u" ]] || continue
+        drv=$(sed -n 's/^DRIVER=//p' "$u" 2>/dev/null) || drv=""
+        case "$drv" in
+            mt7925e|mt7921e) echo "${u%/uevent} (driver: ${drv})"; return 0 ;;
+        esac
+    done
+
+    # Fallback for the not-yet-bound case. Match on the adapter names as well as
+    # the PCI IDs mt7925e/mt7921e really claim; 14c3:0616 is an MT7922 (mt7921e)
+    # and 14c3:0617 was never a real ID, so it is not matched.
     # (Plain grep, not grep -q: it drains stdin, so it is safe under pipefail.)
-    local device_info
-    device_info=$(lspci -nn 2>/dev/null | grep -Ei 'MT7925|14c3:(7925|0616|0617)')
+    device_info=$(lspci -nn 2>/dev/null | grep -Ei 'MT7925|MT7927|MT7922|14c3:(7925|0717|7927|6639|0738|0616)') || device_info=""
     
     if [[ -n "$device_info" ]]; then
         echo "$device_info"
@@ -44,13 +55,40 @@ wifi_detect_hardware() {
     fi
 }
 
+# Resolve which MediaTek driver this machine's Wi-Fi adapter uses
+# MT7922 parts (14c3:0616) bind mt7921e while the MT7925/MT7927 family binds
+# mt7925e. Both expose the same disable_aspm parameter, so every action has to
+# name the driver that is actually present instead of assuming mt7925e.
+# Output: driver name (falls back to mt7925e when nothing can be resolved)
+wifi_get_driver() {
+    local u drv pci_ids
+    for u in /sys/bus/pci/devices/*/uevent; do
+        [[ -r "$u" ]] || continue
+        drv=$(sed -n 's/^DRIVER=//p' "$u" 2>/dev/null) || drv=""
+        case "$drv" in
+            mt7925e|mt7921e) echo "$drv"; return 0 ;;
+        esac
+    done
+
+    # Nothing bound yet: derive it from the PCI ID so an unbound MT7922 does not
+    # get an mt7925e-only configuration written for it.
+    pci_ids=$(lspci -n 2>/dev/null) || pci_ids=""
+    if grep -qi '14c3:0616' <<< "$pci_ids"; then
+        echo "mt7921e"
+        return 0
+    fi
+
+    echo "mt7925e"
+}
+
 # Check if mt7925e kernel module is loaded
 # Returns: 0 if loaded, 1 if not loaded
 wifi_module_loaded() {
     # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
-    local modules
+    local modules drv
     modules=$(lsmod 2>/dev/null) || return 1
-    grep -q "^mt7925e" <<< "$modules"
+    drv=$(wifi_get_driver)
+    grep -q "^${drv}" <<< "$modules"
 }
 
 # Get current WiFi firmware version
@@ -63,9 +101,14 @@ wifi_get_firmware_version() {
     local fw_path="/lib/firmware/mediatek"
     if compgen -G "${fw_path}/mt7925/WIFI_RAM_CODE_MT7925*" >/dev/null 2>&1 \
        || [[ -f "${fw_path}/mt7925e.bin" ]]; then
+        # The driver spells it "WM Firmware Version:", so the extractor has to be
+        # case-insensitive; a case-sensitive 'version' never matches and every
+        # machine reports the constant "present". Fall back to journalctl when
+        # dmesg is restricted for non-root callers.
         local kernel_log fw_ver
         kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
-        fw_ver=$(grep -i "mt7925.*firmware" <<< "$kernel_log" | tail -1 | grep -oP 'version.*') || fw_ver="present"
+        [[ -n "$kernel_log" ]] || kernel_log=$(journalctl -k --no-pager 2>/dev/null) || kernel_log=""
+        fw_ver=$(grep -i "mt7925.*firmware version" <<< "$kernel_log" | tail -1 | grep -oiP 'firmware version:\s*\K.*') || fw_ver="present"
         [[ -n "$fw_ver" ]] || fw_ver="present"
         echo "$fw_ver"
         return 0
@@ -182,12 +225,19 @@ wifi_apply_aspm_workaround() {
         return 0  # Already applied, nothing to do
     fi
     
+    # Name the driver that is actually bound: an MT7922 binds mt7921e, which has
+    # the same disable_aspm knob, and writing mt7925e there would be a silent
+    # no-op. The file path stays mt7925.conf - it is the one the uninstaller,
+    # state-manager and wifi_aspm_workaround_applied already know.
+    local drv
+    drv=$(wifi_get_driver)
+    
     # Create modprobe configuration
-    cat > /etc/modprobe.d/mt7925.conf <<'EOF'
-# MediaTek MT7925 Wi-Fi fix for GZ302
+    cat > /etc/modprobe.d/mt7925.conf <<EOF
+# MediaTek MT792x Wi-Fi fix for GZ302
 # Disable ASPM for stability (required for kernels < 6.17)
 # Based on community findings from EndeavourOS forums and kernel patches
-options mt7925e disable_aspm=1
+options ${drv} disable_aspm=1
 EOF
     
     # Verify creation
@@ -197,9 +247,9 @@ EOF
     
     # Reload module if currently loaded
     if wifi_module_loaded; then
-        modprobe -r mt7925e 2>/dev/null || true
+        modprobe -r "$drv" 2>/dev/null || true
         sleep 1
-        modprobe mt7925e 2>/dev/null || true
+        modprobe "$drv" 2>/dev/null || true
     fi
     
     return 0
@@ -213,18 +263,21 @@ wifi_remove_aspm_workaround() {
         return 0  # Already removed, nothing to do
     fi
     
+    local drv
+    drv=$(wifi_get_driver)
+    
     # Create clean configuration noting native support
     cat > /etc/modprobe.d/mt7925.conf <<'EOF'
-# MediaTek MT7925 Wi-Fi configuration for GZ302
+# MediaTek MT792x Wi-Fi configuration for GZ302
 # Kernel 6.17+ has native ASPM support - no workarounds needed
 # WiFi 7 MLO support and enhanced stability included natively
 EOF
     
     # Reload module if currently loaded
     if wifi_module_loaded; then
-        modprobe -r mt7925e 2>/dev/null || true
+        modprobe -r "$drv" 2>/dev/null || true
         sleep 1
-        modprobe mt7925e 2>/dev/null || true
+        modprobe "$drv" 2>/dev/null || true
     fi
     
     return 0
@@ -260,10 +313,14 @@ EOF
 wifi_apply_configuration() {
     local status=0
     
-    # Always disable power saving (beneficial on all kernels)
-    if ! wifi_disable_powersave; then
-        echo "WARNING: Failed to disable WiFi power saving"
-        status=1
+    # Power saving is only overridden on the kernels that still need the MT792x
+    # stability workarounds. Kernel 6.17+ handles WiFi power saving natively, so
+    # nothing is written there (see docs/technical/kernel-support.md).
+    if wifi_requires_aspm_workaround; then
+        if ! wifi_disable_powersave; then
+            echo "WARNING: Failed to disable WiFi power saving"
+            status=1
+        fi
     fi
     
     # Apply kernel-specific configuration
@@ -389,7 +446,8 @@ wifi_lib_help() {
 GZ302 WiFi Manager Library v3.0.0
 
 Detection Functions (read-only):
-  wifi_detect_hardware          - Check if MT7925e WiFi present
+  wifi_detect_hardware          - Check if MT792x WiFi present
+  wifi_get_driver               - Resolve the bound driver (mt7925e / mt7921e)
   wifi_module_loaded            - Check if kernel module loaded
   wifi_get_firmware_version     - Get firmware version
   wifi_requires_aspm_workaround - Check if workaround needed for kernel version

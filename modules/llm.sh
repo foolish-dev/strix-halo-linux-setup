@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # Strix Halo LLM/AI Module
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This module installs LLM backends for the ASUS ROG Flow Z13 (GZ302)
 # Uses official installation methods - no custom builds
@@ -31,40 +31,50 @@ resolve_script_dir() {
 SCRIPT_DIR="${SCRIPT_DIR:-$(resolve_script_dir)}"
 
 # --- Load Shared Utilities ---
+# The library is never resolved from a world-writable directory: in the
+# curl-only flow this script is itself run from /tmp, so a fixed
+# "${SCRIPT_DIR}/strix-halo-utils.sh" candidate would let any local user plant a
+# file that a root shell then sources.
+STRIX_HALO_LIB_DIR="${STRIX_HALO_LIB_DIR:-}"
 if [[ -f "${SCRIPT_DIR}/../strix-halo-lib/utils.sh" ]]; then
     # shellcheck source=/dev/null
     source "${SCRIPT_DIR}/../strix-halo-lib/utils.sh"
-elif [[ -f "${SCRIPT_DIR}/strix-halo-utils.sh" ]]; then
+elif [[ -n "$STRIX_HALO_LIB_DIR" && -f "${STRIX_HALO_LIB_DIR}/utils.sh" ]]; then
     # shellcheck source=/dev/null
-    source "${SCRIPT_DIR}/strix-halo-utils.sh"
+    source "${STRIX_HALO_LIB_DIR}/utils.sh"
 else
-    echo "strix-halo-utils.sh not found. Downloading..."
-    mkdir -p "$(dirname "${SCRIPT_DIR}/strix-halo-utils.sh")" || { echo "Error: Failed to create directory"; exit 1; }
-    GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com/th3cavalry/strix-halo-linux-setup/main}"
+    echo "strix-halo-lib/utils.sh not found. Downloading..."
+    GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main}"
+    utils_tmp=$(mktemp -d) || { echo "Error: mktemp failed" >&2; exit 1; }
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -o "${SCRIPT_DIR}/strix-halo-utils.sh" || { echo "Error: curl failed"; exit 1; }
+        curl -fsSL "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -o "${utils_tmp}/utils.sh" \
+            || { echo "Error: curl failed" >&2; rm -rf "$utils_tmp"; exit 1; }
     elif command -v wget >/dev/null 2>&1; then
-        wget "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -O "${SCRIPT_DIR}/strix-halo-utils.sh"
+        wget -q "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -O "${utils_tmp}/utils.sh" \
+            || { echo "Error: wget failed" >&2; rm -rf "$utils_tmp"; exit 1; }
     else
-        echo "Error: curl or wget not found. Cannot download utils."
+        echo "Error: curl or wget not found. Cannot download utils." >&2
+        rm -rf "$utils_tmp"
         exit 1
     fi
-    
-    if [[ -f "${SCRIPT_DIR}/strix-halo-utils.sh" ]]; then
-        chmod +x "${SCRIPT_DIR}/strix-halo-utils.sh"
-        # shellcheck source=/dev/null
-        source "${SCRIPT_DIR}/strix-halo-utils.sh"
-    else
-        echo "Error: Failed to download strix-halo-utils.sh"
-        exit 1
-    fi
+    # shellcheck source=/dev/null
+    source "${utils_tmp}/utils.sh"
+    rm -rf "$utils_tmp"
 fi
 
+
+# --- Real user resolution ---
+# This module requires root, and under sudo $HOME is /root — so anything keyed on
+# $HOME lands where the user cannot see or write it. Resolve the invoking user's
+# home the way command-center/install-tray.sh does.
+REAL_USER=$(get_real_user 2>/dev/null || echo root)
+REAL_HOME=$(getent passwd "$REAL_USER" 2>/dev/null | cut -d: -f6 || true)
+REAL_HOME="${REAL_HOME:-$HOME}"
 
 # --- Configuration ---
 LLM_VERSION="6.0.0"
 OLLAMA_ENV_FILE="/etc/systemd/system/ollama.service.d/strix-halo.conf"
-LMSTUDIO_APPIMAGE="${HOME}/Applications/LMStudio.AppImage"
+LMSTUDIO_APPIMAGE="${REAL_HOME}/Applications/LMStudio.AppImage"
 VLLM_VENV="/opt/strix-halo-vllm"
 
 # --- AMD Strix Halo GPU Configuration ---
@@ -72,13 +82,23 @@ VLLM_VENV="/opt/strix-halo-vllm"
 # Detect ROCm version
 # Returns: version string (e.g., "7.2.0") or "unknown"
 get_rocm_version() {
+    # Always print something and always return 0. A bare `rocminfo | grep` dies
+    # under pipefail whenever the pattern does not match — which is the normal
+    # case once ROCm is installed, since rocminfo prints "Runtime Version:" —
+    # and both callers assign it after a separate `local`, so the failure would
+    # propagate and abort the module on its second run.
+    local version=""
+
     if command -v rocminfo &>/dev/null; then
-        rocminfo 2>/dev/null | grep -oP 'ROCm Runtime Version: \K[0-9.]+' | head -1
-    elif [[ -f /opt/rocm/.info/version ]]; then
-        cat /opt/rocm/.info/version 2>/dev/null
-    else
-        echo "unknown"
+        version=$(rocminfo 2>/dev/null | grep -oP 'ROC(m )?Runtime Version:\s*\K[0-9.]+' | head -1) || version=""
     fi
+
+    if [[ -z "$version" && -f /opt/rocm/.info/version ]]; then
+        version=$(cat /opt/rocm/.info/version 2>/dev/null) || version=""
+    fi
+
+    printf '%s\n' "${version:-unknown}"
+    return 0
 }
 
 # Check if ROCm version is 7.2 or higher (native gfx1151 support)
@@ -208,9 +228,10 @@ install_lmstudio() {
     fi
     
     chmod +x "$LMSTUDIO_APPIMAGE"
+    chown -R "$REAL_USER:" "$(dirname "$LMSTUDIO_APPIMAGE")" 2>/dev/null || true
     
-    mkdir -p "${HOME}/.local/share/applications"
-    cat > "${HOME}/.local/share/applications/lmstudio.desktop" << EOF
+    mkdir -p "${REAL_HOME}/.local/share/applications"
+    cat > "${REAL_HOME}/.local/share/applications/lmstudio.desktop" << EOF
 [Desktop Entry]
 Name=LM Studio
 Comment=Local LLM Application
@@ -220,6 +241,7 @@ Type=Application
 Categories=Development;Utility;
 Terminal=false
 EOF
+    chown "$REAL_USER:" "${REAL_HOME}/.local/share/applications/lmstudio.desktop" 2>/dev/null || true
     
     success "LM Studio installed"
 }
@@ -497,11 +519,16 @@ install_librechat() {
 install_python_ai_libs() {
     print_section "Installing Python AI Libraries"
     
-    local venv_path="${HOME}/.strix-halo-ai"
+    local venv_path="${REAL_HOME}/.strix-halo-ai"
     
     if [[ -d "$venv_path" ]]; then
         info "Python AI environment already exists at $venv_path"
-        read -r -p "Reinstall? (y/N): " reinstall
+        # Non-interactive runs keep the existing environment, so a second `-y`
+        # run stays idempotent instead of rebuilding it.
+        local reinstall="n"
+        if [[ "${ASSUME_YES:-false}" != "true" ]]; then
+            read -r -p "Reinstall? (y/N): " reinstall || reinstall="n"
+        fi
         [[ ! "$reinstall" =~ ^[Yy] ]] && return 0
         rm -rf "$venv_path"
     fi
@@ -543,6 +570,7 @@ echo "Python AI environment activated"
 EOF
     fi
     chmod +x "${venv_path}/activate-ai"
+    chown -R "$REAL_USER:" "$venv_path" 2>/dev/null || true
     
     success "Python AI libraries installed"
     info "Activate: source ${venv_path}/activate-ai"
@@ -565,7 +593,14 @@ ask_backends() {
     echo "  6) All backends"
     echo "  7) Skip"
     echo
-    read -r -p "Choice (comma-separated, e.g., 1,2 or 7 to skip): " choice || choice="7"
+    if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+        # Non-interactive default: skip. Backends pull multi-gigabyte payloads,
+        # so they are never installed without an explicit choice.
+        choice="7"
+        info "Non-interactive mode: skipping LLM backends"
+    else
+        read -r -p "Choice (comma-separated, e.g., 1,2 or 7 to skip): " choice || choice="7"
+    fi
     
     [[ "$choice" == "7" || -z "$choice" ]] && return
     
@@ -602,7 +637,12 @@ ask_frontends() {
     echo "  5) All frontends"
     echo "  6) Skip"
     echo
-    read -r -p "Choice (comma-separated, e.g., 1,2 or 6 to skip): " choice || choice="6"
+    if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+        choice="6"
+        info "Non-interactive mode: skipping web frontends"
+    else
+        read -r -p "Choice (comma-separated, e.g., 1,2 or 6 to skip): " choice || choice="6"
+    fi
     
     [[ "$choice" == "6" || -z "$choice" ]] && return
     
@@ -635,7 +675,12 @@ ask_libraries() {
     echo "  - bitsandbytes for quantization"
     echo "  - HuggingFace Hub integration"
     echo
-    read -r -p "Install Python AI libraries? (y/N): " choice || choice="n"
+    if [[ "${ASSUME_YES:-false}" == "true" ]]; then
+        choice="n"
+        info "Non-interactive mode: skipping Python AI libraries"
+    else
+        read -r -p "Install Python AI libraries? (y/N): " choice || choice="n"
+    fi
     
     if [[ "$choice" =~ ^[Yy] ]]; then
         install_python_ai_libs
@@ -662,7 +707,7 @@ show_summary() {
     [[ -d "/opt/librechat" ]] && echo "  ✓ LibreChat: http://localhost:3080"
     
     # Libraries
-    [[ -d "${HOME}/.strix-halo-ai" ]] && echo "  ✓ Python AI: source ~/.strix-halo-ai/activate-ai"
+    [[ -d "${REAL_HOME}/.strix-halo-ai" ]] && echo "  ✓ Python AI: source ${REAL_HOME}/.strix-halo-ai/activate-ai"
     
     echo
     info "GPU configured for AMD Radeon 8060S (Strix Halo)"

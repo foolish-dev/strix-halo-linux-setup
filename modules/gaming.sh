@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # Strix Halo Gaming Module
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # This module installs gaming software for the ASUS ROG Flow Z13 (GZ302)
 # Includes: Steam, Lutris, MangoHUD, GameMode, Wine, and performance tools
@@ -27,33 +27,35 @@ resolve_script_dir() {
 SCRIPT_DIR="${SCRIPT_DIR:-$(resolve_script_dir)}"
 
 # --- Load Shared Utilities ---
+# The library is never resolved from a world-writable directory: in the
+# curl-only flow this script is itself run from /tmp, so a fixed
+# "${SCRIPT_DIR}/strix-halo-utils.sh" candidate would let any local user plant a
+# file that a root shell then sources.
+STRIX_HALO_LIB_DIR="${STRIX_HALO_LIB_DIR:-}"
 if [[ -f "${SCRIPT_DIR}/../strix-halo-lib/utils.sh" ]]; then
     # shellcheck source=/dev/null
     source "${SCRIPT_DIR}/../strix-halo-lib/utils.sh"
-elif [[ -f "${SCRIPT_DIR}/strix-halo-utils.sh" ]]; then
+elif [[ -n "$STRIX_HALO_LIB_DIR" && -f "${STRIX_HALO_LIB_DIR}/utils.sh" ]]; then
     # shellcheck source=/dev/null
-    source "${SCRIPT_DIR}/strix-halo-utils.sh"
+    source "${STRIX_HALO_LIB_DIR}/utils.sh"
 else
-    echo "strix-halo-utils.sh not found. Downloading..."
-    mkdir -p "$(dirname "${SCRIPT_DIR}/strix-halo-utils.sh")" || { echo "Error: Failed to create directory"; exit 1; }
-    GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com/th3cavalry/strix-halo-linux-setup/main}"
+    echo "strix-halo-lib/utils.sh not found. Downloading..."
+    GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main}"
+    utils_tmp=$(mktemp -d) || { echo "Error: mktemp failed" >&2; exit 1; }
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -o "${SCRIPT_DIR}/strix-halo-utils.sh" || { echo "Error: curl failed"; exit 1; }
+        curl -fsSL "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -o "${utils_tmp}/utils.sh" \
+            || { echo "Error: curl failed" >&2; rm -rf "$utils_tmp"; exit 1; }
     elif command -v wget >/dev/null 2>&1; then
-        wget "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -O "${SCRIPT_DIR}/strix-halo-utils.sh"
+        wget -q "${GITHUB_RAW_URL}/strix-halo-lib/utils.sh" -O "${utils_tmp}/utils.sh" \
+            || { echo "Error: wget failed" >&2; rm -rf "$utils_tmp"; exit 1; }
     else
-        echo "Error: curl or wget not found. Cannot download utils."
+        echo "Error: curl or wget not found. Cannot download utils." >&2
+        rm -rf "$utils_tmp"
         exit 1
     fi
-    
-    if [[ -f "${SCRIPT_DIR}/strix-halo-utils.sh" ]]; then
-        chmod +x "${SCRIPT_DIR}/strix-halo-utils.sh"
-        # shellcheck source=/dev/null
-        source "${SCRIPT_DIR}/strix-halo-utils.sh"
-    else
-        echo "Error: Failed to download strix-halo-utils.sh"
-        exit 1
-    fi
+    # shellcheck source=/dev/null
+    source "${utils_tmp}/utils.sh"
+    rm -rf "$utils_tmp"
 fi
 
 # --- Main Installation Logic ---

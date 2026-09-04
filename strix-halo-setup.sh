@@ -3,7 +3,7 @@
 # ==============================================================================
 # Strix Halo Linux Setup — Unified Installer
 # Author: th3cavalry using Copilot
-# Version: 6.8.0
+# Version: 6.9.0
 #
 # Supported devices (Strix Halo platform — AMD Ryzen AI MAX / MAX+):
 # BEGIN AUTO-GENERATED SUPPORTED DEVICES
@@ -29,13 +29,14 @@
 # GUI inspiration: Strix-Halo-Control (https://github.com/TechnoDaimon/Strix-Halo-Control)
 # AI toolboxes: amd-strix-halo-toolboxes (https://github.com/kyuz0/amd-strix-halo-toolboxes)
 #
-# REQUIRED: Linux kernel 6.14+ minimum (6.17+ strongly recommended)
+# REQUIRED: Linux kernel 6.12+ minimum (6.17+ strongly recommended)
 # ==============================================================================
 
 set -euo pipefail
 
 # --- CLI Flags ---
-ASSUME_YES="${ASSUME_YES:-false}"
+# Exported so dispatched modules (which run in child shells) can honor it.
+export ASSUME_YES="${ASSUME_YES:-false}"
 SKIP_FIXES=false
 SKIP_Z13CTL=false
 SKIP_TOOLS=false
@@ -81,12 +82,15 @@ while [[ $# -gt 0 ]]; do
         --no-modules)    SKIP_MODULES=true; shift ;;
         -h|--help)
             cat << 'EOF'
-Strix Halo Linux Setup — Unified Installer v6.8.0
+Strix Halo Linux Setup — Unified Installer v6.9.0
 
 Usage: sudo ./strix-halo-setup.sh [OPTIONS]
 
 Options:
-  -y, --assume-yes   Accept all defaults (non-interactive)
+  -y, --assume-yes   Accept all defaults (non-interactive).
+                     In the AI / LLM module this skips the backend,
+                     frontend and Python-library prompts rather than
+                     installing multi-gigabyte payloads unattended.
   --fixes-only       Apply hardware fixes only (skip z13ctl, tools, modules)
   --tools-only       Install tools only (skip hardware fixes and modules)
   --no-fixes         Skip hardware fixes
@@ -96,8 +100,8 @@ Options:
   -h, --help         Show this help message
 
 Sections (each prompted with Y/n):
-  1. Hardware Fixes    WiFi, GPU, Input, Audio, Display, Suspend
-    2. Command Center   z13ctl on supported ASUS devices; GZ302 tray app when applicable
+  1. Hardware Fixes   WiFi, GPU, Input, Audio, Display, Suspend
+  2. Command Center   Strix Halo dashboard; z13ctl control on supported ASUS devices
   3. Gaming           Steam, Lutris, MangoHUD, GameMode, Proton-GE
   4. AI / LLM         Ollama, ROCm, vLLM, ComfyUI, PyTorch
   5. Other Tools      Hypervisor (KVM/QEMU), community integrations
@@ -116,10 +120,12 @@ EOF
 done
 
 # --- GitHub base URL ---
-GITHUB_RAW_URL="https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main"
+# Exported: modules run in child shells (bash "$module"), so a plain
+# assignment would leave them falling back to their own upstream default.
+export GITHUB_RAW_URL="https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main"
 
 # --- Version (read once at startup) ---
-SETUP_VERSION="6.8.0"
+SETUP_VERSION="6.9.0"
 
 # --- Script directory detection ---
 resolve_script_dir() {
@@ -133,6 +139,10 @@ resolve_script_dir() {
     cd -P "$(dirname "$source")" && pwd
 }
 SCRIPT_DIR="${SCRIPT_DIR:-$(resolve_script_dir)}"
+
+# Modules run as separate processes and must never derive the library location
+# from their own (possibly /tmp) path. Hand them the resolved directory instead.
+export STRIX_HALO_LIB_DIR="${SCRIPT_DIR}/strix-halo-lib"
 
 # --- Load Shared Utilities ---
 if [[ -f "${SCRIPT_DIR}/strix-halo-lib/utils.sh" ]]; then
@@ -223,15 +233,19 @@ check_kernel_version() {
         local kver
         kver=$(kernel_get_version_num)
         info "Detected kernel version: $(uname -r)"
+        # Derive every number from the kernel-compat constants so the message,
+        # the enforced gate and the reported band can never drift apart.
         if ! kernel_meets_minimum 2>/dev/null; then
-            error "Kernel 6.14+ is required. Please upgrade."
+            error "Kernel $((KERNEL_MIN / 100)).$((KERNEL_MIN % 100))+ is required. Please upgrade."
         fi
-        if [[ $kver -ge 619 ]]; then
-            success "Kernel 6.19+ — all hardware natively supported"
-        elif [[ $kver -ge 617 ]]; then
-            success "Kernel 6.17+ — recommended (WiFi/Input native)"
+        if [[ $kver -ge $KERNEL_AUDIO_NATIVE ]]; then
+            success "Kernel $(kernel_get_version_short) — at or above $((KERNEL_AUDIO_NATIVE / 100)).$((KERNEL_AUDIO_NATIVE % 100)); all hardware natively supported"
+        elif [[ $kver -ge $KERNEL_NATIVE ]]; then
+            success "Kernel $(kernel_get_version_short) — recommended (WiFi/Input native)"
+        elif [[ $kver -ge $KERNEL_RECOMMENDED ]]; then
+            warning "Kernel $(kernel_get_version_short) — some workarounds will be applied"
         else
-            warning "Kernel 6.14–6.16 — some workarounds will be applied"
+            warning "Kernel $(kernel_get_version_short) — below the recommended $((KERNEL_RECOMMENDED / 100)).$((KERNEL_RECOMMENDED % 100)); MT7925 WiFi and XDNA NPU support may be missing"
         fi
         echo "$kver"
     else
@@ -332,7 +346,7 @@ apply_hardware_fixes() {
 
     # Delegate modular hardware configuration to the library orchestrator.
     # Covers: WiFi, GPU (incl. Early KMS via gpu_configure_early_kms),
-    #         Input, RGB, backlight restore, battery limit, amd_pstate.
+    #         Input (incl. the keyboard RGB udev rule), amd_pstate.
     distro_apply_hardware_fixes
 
     # Audio: SOF firmware + CS35L41 ASoC configuration.
@@ -806,15 +820,25 @@ install_tray_app() {
 
     local tray_dir="${SCRIPT_DIR}/command-center"
     if [[ ! -d "$tray_dir" ]]; then
-        info "Downloading tray app..."
-        mkdir -p "$tray_dir"
+        # Stage the remote copy in a stable system location instead of next to
+        # the downloaded script: install-tray.sh already probes this path, and
+        # baking a user's home directory into a system-wide .desktop Exec= is not
+        # something a curl-only install should do.
+        tray_dir="/usr/local/share/strix-halo/command-center"
+        info "Downloading tray app to ${tray_dir}..."
+        install -d -m 755 "$tray_dir" "${tray_dir}/src" "${tray_dir}/src/modules" "${tray_dir}/assets"
         for f in install-tray.sh requirements.txt VERSION; do
             curl -fsSL "${GITHUB_RAW_URL}/command-center/${f}" -o "${tray_dir}/${f}" 2>/dev/null || true
         done
-        mkdir -p "${tray_dir}/src/modules"
-        for f in command_center.py modules/__init__.py modules/config.py modules/notifications.py \
-                 modules/power_controller.py modules/rgb_controller.py; do
+        for f in command_center.py kwin_dashboard_positioner.js modules/__init__.py modules/config.py \
+                 modules/notifications.py modules/power_controller.py modules/rgb_controller.py; do
             curl -fsSL "${GITHUB_RAW_URL}/command-center/src/${f}" -o "${tray_dir}/src/${f}" 2>/dev/null || true
+        done
+        # command_center.py resolves its icons as <app dir>/assets/<name>.svg;
+        # without these every profile icon silently degrades to a painted letter.
+        for f in ac.svg battery.svg lightning.svg profile-b.svg profile-e.svg profile-f.svg \
+                 profile-g.svg profile-m.svg profile-p.svg; do
+            curl -fsSL "${GITHUB_RAW_URL}/command-center/assets/${f}" -o "${tray_dir}/assets/${f}" 2>/dev/null || true
         done
     fi
 
@@ -849,7 +873,7 @@ EOF
 
     # Run the tray installer
     if [[ -f "${tray_dir}/install-tray.sh" ]]; then
-        bash "${tray_dir}/install-tray.sh"
+        bash "${tray_dir}/install-tray.sh" || warning "Tray installer reported issues"
     fi
 
     # Sync tray source files to /opt/strix-halo-control-center if that install exists
@@ -1049,8 +1073,11 @@ download_and_execute_module() {
     # Check for local module first
     if [[ -f "$local_module" ]]; then
         info "Running local module ${module_name}..."
-        bash "$local_module" "$distro"
-        return $?
+        # Capture the status: a bare call would take the whole installer down
+        # with it under set -e, and the `return $?` below would never run.
+        local rc=0
+        bash "$local_module" "$distro" || rc=$?
+        return $rc
     fi
 
     local tmp
@@ -1064,8 +1091,8 @@ download_and_execute_module() {
 
     if [[ -s "$tmp" ]]; then
         chmod +x "$tmp"
-        bash "$tmp" "$distro"
-        local rc=$?
+        local rc=0
+        bash "$tmp" "$distro" || rc=$?
         rm -f "$tmp"
         return $rc
     fi
@@ -1085,8 +1112,13 @@ setup_distro_base() {
 
     case "$distro" in
         arch)
-            pacman -Syu --noconfirm --needed
-            pacman -S --noconfirm --needed git base-devel wget curl
+            # Fail fast on the upgrade: continuing to install base packages after
+            # a failed -Syu is how partial upgrades happen on Arch.
+            if ! pacman -Syu --noconfirm --needed; then
+                warning "System upgrade failed — skipping base packages to avoid a partial upgrade"
+                return 1
+            fi
+            pacman -S --noconfirm --needed git base-devel wget curl || warning "Base packages incomplete"
             # Install AUR helper if missing
             if ! command -v yay >/dev/null 2>&1 && ! command -v paru >/dev/null 2>&1; then
                 info "Installing yay AUR helper..."
@@ -1098,16 +1130,20 @@ setup_distro_base() {
             fi
             ;;
         debian|ubuntu)
-            apt update && apt upgrade -y
-            apt install -y curl wget git build-essential ca-certificates gnupg
+            if ! { apt update && apt upgrade -y; }; then
+                warning "System upgrade reported issues"
+            fi
+            apt install -y curl wget git build-essential ca-certificates gnupg || warning "Base packages incomplete"
             ;;
         fedora)
-            dnf upgrade -y
-            dnf install -y curl wget git gcc make kernel-devel
+            dnf upgrade -y || warning "System upgrade reported issues"
+            dnf install -y curl wget git gcc make kernel-devel || warning "Base packages incomplete"
             ;;
         opensuse)
-            zypper refresh && zypper update -y
-            zypper install -y curl wget git gcc make kernel-devel
+            if ! { zypper refresh && zypper update -y; }; then
+                warning "System upgrade reported issues"
+            fi
+            zypper install -y curl wget git gcc make kernel-devel || warning "Base packages incomplete"
             ;;
     esac
     success "System updated"
@@ -1164,14 +1200,14 @@ main() {
 
     # Update system
     if prompt_section "Update system and install base packages? (Y/n): " Y; then
-        setup_distro_base "$distro"
+        setup_distro_base "$distro" || warning "Base package setup reported issues"
     fi
 
     # --- Step 2: Hardware fixes (kernel-level) --------------------------------
     if [[ "$SKIP_FIXES" != "true" ]]; then
         echo
         if prompt_section "Apply hardware fixes? (WiFi, GPU, Input, Audio, Display, Suspend) (Y/n): " Y; then
-            apply_hardware_fixes
+            apply_hardware_fixes || warning "Hardware fixes reported issues"
         else
             info "Skipping hardware fixes"
         fi
@@ -1194,10 +1230,10 @@ main() {
 
         if [[ -n "$cc_prompt" ]] && prompt_section "$cc_prompt (Y/n): " Y; then
             if [[ "$SKIP_Z13CTL" != "true" ]]; then
-                install_z13ctl
+                install_z13ctl || warning "z13ctl setup incomplete — continuing"
             fi
             if [[ "$SKIP_TOOLS" != "true" ]]; then
-                install_display_tools
+                install_display_tools || warning "Display tools setup incomplete"
             fi
         elif [[ -n "$cc_prompt" ]]; then
             info "Skipping dashboard / device control path"
@@ -1210,7 +1246,7 @@ main() {
     if [[ "$SKIP_MODULES" != "true" ]]; then
         echo
         if prompt_section "Install Gaming packages? (Steam, Lutris, MangoHUD, GameMode) (y/N): " N; then
-            install_gaming_module
+            install_gaming_module || warning "Gaming module reported issues"
         else
             info "Skipping Gaming"
         fi
@@ -1219,7 +1255,7 @@ main() {
         echo
         if [[ "$SKIP_AI" != "true" ]]; then
             if prompt_section "Install AI / LLM packages? (Ollama, ROCm, vLLM, ComfyUI) (y/N): " N; then
-                install_ai_module
+                install_ai_module || warning "AI / LLM module reported issues"
             else
                 info "Skipping AI / LLM"
             fi
@@ -1230,7 +1266,7 @@ main() {
         # --- Step 6: Other tools ----------------------------------------------
         echo
         if prompt_section "Browse other tools? (Hypervisor, community integrations) (y/N): " N; then
-            install_other_tools
+            install_other_tools || warning "Other tools reported issues"
         else
             info "Skipping other tools"
         fi

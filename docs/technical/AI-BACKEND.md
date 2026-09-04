@@ -2,57 +2,116 @@
 
 ## Overview
 
-The GZ302 Linux Setup now includes AI backend support with **Lemonade SDK** as the default. Lemonade provides a unified API for local AI development with multi-backend support for NPU, GPU, and CPU acceleration.
+AI/LLM support is installed by **Section 4: AI / LLM** of `strix-halo-setup.sh`, which runs
+`modules/llm.sh`. The module does not pick a backend for you and there is no single "default"
+backend: it asks, interactively, which backend(s), frontend(s) and Python libraries to install,
+and installs exactly what you select. Backends coexist — installing one does not remove another.
 
-## Default AI Backend: Lemonade SDK
+Before anything is installed, the module configures the ROCm environment for the Radeon 8060S
+(gfx1151) by writing `/etc/profile.d/strix-halo-rocm.sh`:
 
-Lemonade SDK is installed by default and provides:
+- **ROCm 7.2 or newer** — native gfx1151 support, no HSA override
+- **ROCm older than 7.2** — `HSA_OVERRIDE_GFX_VERSION=11.0.0` (gfx1100/RDNA 3 compatibility)
 
-- **OpenAI API Compatible** - Works with hundreds of existing AI applications without code changes
-- **Multi-Engine Architecture** - Supports llama.cpp, Ryzen AI SW, FastFlowLM, whisper.cpp, stablediffusion.cpp, Kokoro
+The same version check gates the environment written for Ollama, vLLM and the Python AI venv.
+
+## Backend Selection
+
+`modules/llm.sh` → `ask_backends()` (Step 1) presents:
+
+| Option | Backend | Installed via | Distro support |
+|--------|---------|---------------|----------------|
+| 1 | Lemonade SDK | AUR (`paru`/`yay`) | Arch/CachyOS only |
+| 2 | Ollama | Official `ollama.com/install.sh` | All |
+| 3 | LM Studio | AppImage from `lmstudio.ai` | All |
+| 4 | llama.cpp | Upstream release tarball (Vulkan build preferred) | All |
+| 5 | vLLM | pip, in `/opt/strix-halo-vllm` venv | All |
+| 6 | All of the above | — | Lemonade step is skipped with a warning off Arch |
+| 7 | Skip | — | — |
+
+The prompt accepts a comma-separated list (for example `2,4`). Step 2 offers web frontends
+(Open WebUI, SillyTavern, Text Generation WebUI, LibreChat — all via Docker) and Step 3 offers a
+Python AI virtualenv in `~/.strix-halo-ai` (PyTorch/ROCm, Transformers, PEFT, bitsandbytes).
+
+There is **no `AI_BACKEND` environment variable** and **no `/etc/strix-halo/ai/backend` file** —
+selection is interactive only.
+
+## Lemonade SDK (Option 1)
+
+Lemonade provides a unified, OpenAI-compatible API for local AI with NPU, GPU and CPU backends:
+
+- **OpenAI API Compatible** - Works with existing AI applications without code changes
+- **Multi-Engine Architecture** - llama.cpp, Ryzen AI SW, FastFlowLM, whisper.cpp, stablediffusion.cpp, Kokoro
 - **Multi-Modal Support** - Text generation, image generation, speech-to-text, text-to-speech, embeddings, reranking
-- **Hardware Auto-Configuration** - Automatically configures NPU, GPU, and CPU backends for optimal performance
-- **Cross-Platform** - Consistent experience across Windows, Linux, and macOS
+- **Hardware Auto-Configuration** - Detects NPU, GPU and CPU backends
+- **Cross-Platform** - Windows, Linux and macOS upstream
 
 ### Hardware Requirements
 
-Lemonade SDK works best on systems with:
+Lemonade works best on systems with:
 
 - **AMD Ryzen AI processors** (Phoenix, Hawk Point, Strix, Strix Halo, Krackan Point)
 - **AMD Radeon GPUs** (Radeon 7000 series and newer)
 - **Any modern CPU** (for CPU fallback)
 
+### Availability: Arch/CachyOS Only
+
+> **Known multi-distro gap.** `install_lemonade()` installs from the AUR and requires `paru` or
+> `yay`. On Debian/Ubuntu, Fedora and openSUSE — and on an Arch system with no AUR helper — it
+> prints `No AUR helper found. Cannot install lemonade-desktop automatically.` and returns 1, so
+> nothing is installed. This is a real exception to the project's multi-distro parity rule
+> (`.github/copilot-instructions.md`, "Multi-Distro Equality"). Until a non-AUR install path
+> exists, use Ollama, llama.cpp or vLLM on those distributions; all three are installed the same
+> way on every supported distro.
+
 ### Installation
 
-Lemonade SDK is automatically installed during the main installation process. The installer:
+Selecting option 1 (or 6) runs `install_lemonade()`, which:
 
-1. Installs base dependencies (Python, pip, cmake, git, build-essential)
-2. Installs Lemonade SDK via pip with AMD's custom PyPI index
-3. Installs NPU drivers for Ryzen AI support
-4. Installs Vulkan for GPU acceleration
-5. Creates `/etc/strix-halo/ai/backend` file with the selected backend
+1. Returns early if `lemonade-server` is already on `PATH` (idempotent)
+2. Installs `lemonade-desktop`, `lemonade-server` and `fastflowlm` with the detected AUR helper
+3. Writes `/etc/security/limits.d/99-xrt.conf` with `memlock unlimited` for XRT/NPU access
+4. Runs `systemctl enable --now lemonade-server`
+
+Note that the module does **not** install NPU kernel drivers; the `amdxdna` driver ships in-tree
+from kernel 6.14 onward (see `docs/technical/kernel-support.md`). It also does not install the
+upstream Lemonade pip package or configure AMD's PyPI index.
 
 ### Usage
 
-After installation, you can use Lemonade in several ways:
-
-#### Command Line Interface
+The AUR packages provide the `lemonade-server` CLI plus the Lemonade desktop application; the
+`lemonade-server` systemd service is already running after installation.
 
 ```bash
-# List available models
-lemonade list
+# Service state (the installer enables and starts it)
+systemctl status lemonade-server
 
-# Start a chat session
-lemonade chat
-
-# Run Lemonade Server (OpenAI-compatible API)
-lemonade server
-
-# Download and manage models
-lemonade models
+# CLI entry point — run --help for the subcommands your version ships
+lemonade-server --help
 ```
 
+#### OpenAI-Compatible API
+
+Lemonade Server exposes an OpenAI-compatible endpoint (default port 8000):
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "amd/Llama-3.2-1B-Instruct",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "temperature": 0.7
+  }'
+```
+
+If you also installed SillyTavern in Step 2, note that its container publishes port 8000 as well —
+one of the two has to be moved.
+
 #### Python API
+
+The in-process Python API below comes from the upstream `lemonade` pip package, which this
+installer does **not** install. Install it yourself (ideally into a virtualenv, for example the one
+from Step 3) if you want it:
 
 ```python
 from lemonade.api import from_pretrained
@@ -67,130 +126,87 @@ response = model.generate(input_ids, max_new_tokens=30)
 print(tokenizer.decode(response[0]))
 ```
 
-#### OpenAI-Compatible API
+## Other Backends
 
-Lemonade Server provides an OpenAI-compatible endpoint:
-
-```bash
-# Start the server
-lemonade server
-
-# Use with any OpenAI-compatible client
-curl http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "amd/Llama-3.2-1B-Instruct",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "temperature": 0.7
-  }'
-```
-
-## Alternative AI Backends
-
-If you prefer a different AI backend, you can configure it during installation or after.
-
-### Environment Variables
-
-Set `AI_BACKEND` before running the installer:
-
-```bash
-# Use Lemonade (default)
-sudo AI_BACKEND=lemonade bash strix-halo-setup.sh
-
-# Use ROCm
-sudo AI_BACKEND=rocm bash strix-halo-setup.sh
-
-# Use CPU only
-sudo AI_BACKEND=cpu bash strix-halo-setup.sh
-```
-
-### Supported Backends
-
-| Backend | Description | Best For |
-|---------|-------------|----------|
-| `lemonade` | Unified API, OpenAI-compatible, multi-backend | Default choice, most features |
-| `rocm` | AMD GPU compute stack | AMD GPU-focused workloads |
-| `cpu` | Generic Python support | Systems without dedicated GPU/NPU |
-
-### Post-Installation Backend Switching
-
-To switch backends after installation:
-
-1. Remove the current backend packages
-2. Install the new backend packages
-3. Update `/etc/strix-halo/ai/backend`:
-
-```bash
-echo "rocm" | sudo tee /etc/strix-halo/ai/backend
-```
+| Backend | Entry point | Notes |
+|---------|-------------|-------|
+| Ollama | `ollama run llama3.2`, API on `http://localhost:11434` | GPU env in `/etc/systemd/system/ollama.service.d/strix-halo.conf` |
+| LM Studio | `~/Applications/LMStudio.AppImage` (+ desktop entry) | GUI; downloaded from `lmstudio.ai` |
+| llama.cpp | `llama-cli` / `llama-server` in `/usr/local/bin` | Vulkan build when available, CPU build as fallback |
+| vLLM | `source /opt/strix-halo-vllm/activate-vllm` | OpenAI-compatible server, ROCm env baked into the activate script |
+| Python AI libs | `source ~/.strix-halo-ai/activate-ai` | PyTorch/ROCm, Transformers, PEFT, bitsandbytes, TRL |
 
 ## Backend Comparison
 
 ### Lemonade SDK
-- ✅ Unified API across all backends
-- ✅ OpenAI-compatible out of the box
-- ✅ Automatic hardware detection and optimization
-- ✅ Multi-model support (text, image, speech)
-- ✅ Cross-platform (Windows, Linux, macOS)
-- ❌ Requires Python dependencies
+- ✅ Unified, OpenAI-compatible API across NPU/GPU/CPU
+- ✅ Uses the NPU (via FastFlowLM / Ryzen AI), which no other option here does
+- ✅ Multi-modal (text, image, speech)
+- ❌ Arch/CachyOS only, and needs an AUR helper
 - ❌ Larger installation footprint
 
-### ROCm
-- ✅ Direct AMD GPU access
-- ✅ Optimized for AMD GPUs
-- ✅ Lower-level control
-- ❌ Linux-only
-- ❌ Requires ROCm-compatible hardware
-- ❌ More complex setup
+### Ollama
+- ✅ Available on every supported distribution
+- ✅ Simplest model management, works with most frontends
+- ✅ Configured here for gfx1151 (or gfx1100 override on older ROCm)
+- ❌ ROCm-dependent for GPU acceleration
+- ❌ Less control over inference parameters
 
-### CPU Only
-- ✅ Works on any system
-- ✅ Minimal dependencies
-- ✅ No GPU/NPU requirements
-- ❌ Slower performance
-- ❌ Limited model support
-- ❌ No hardware acceleration
+### llama.cpp
+- ✅ Available on every supported distribution
+- ✅ Vulkan build avoids the ROCm dependency entirely
+- ✅ Lightweight, fast to start
+- ❌ CLI-only, manual GGUF model management
+
+### vLLM
+- ✅ Production-grade OpenAI-compatible server
+- ✅ Isolated in its own venv, so it cannot break system Python
+- ❌ Heaviest install, ROCm-dependent
+- ❌ Overkill for single-user desktop inference
+
+## Switching Backends
+
+There is no backend config file to edit. To change what you run:
+
+1. Re-run `strix-halo-setup.sh` and choose Section 4, then select the backend(s) you want — every
+   install function checks for an existing installation first, so re-running is safe.
+2. Remove what you no longer need with the normal tools: the distro package manager for AUR/Ollama
+   packages, `docker rm -f <name>` for frontends, or by deleting `/opt/strix-halo-vllm`,
+   `~/.strix-halo-ai` or `~/Applications/LMStudio.AppImage`.
 
 ## Troubleshooting
 
-### Lemonade Installation Issues
+### Lemonade Installation Fails
 
-If Lemonade installation fails:
-
-1. Check Python version: `python3 --version` (should be 3.8+)
-2. Check pip: `pip3 --version`
-3. Verify AMD PyPI index: `pip config list | grep extra-index-url`
-4. Check for network issues: `curl https://pypi.amd.com/simple`
+1. Confirm the distribution is Arch/CachyOS: `grep -E '^(ID|ID_LIKE)=' /etc/os-release`
+2. Confirm an AUR helper is present: `command -v paru || command -v yay`
+3. Check the service: `systemctl status lemonade-server`
+4. Check NPU limits were applied: `cat /etc/security/limits.d/99-xrt.conf`
+5. On any other distribution, install Ollama, llama.cpp or vLLM instead
 
 ### Backend Detection
 
-Lemonade automatically detects available hardware:
-
-- **NPU**: AMD Ryzen AI processors (XDNA architecture)
-- **GPU**: AMD Radeon GPUs (via Vulkan)
-- **CPU**: Any modern CPU (fallback)
-
-You can check what's available:
+Check what acceleration is actually available:
 
 ```bash
-# Check NPU
-npu-smi -l
+# NPU (XDNA) — driver and device node
+lsmod | grep amdxdna
+ls /dev/accel/
 
-# Check GPU
+# GPU
+rocminfo | grep -i gfx
 vulkaninfo --summary
 
-# Check CPU
+# CPU
 lscpu
 ```
 
 ### Model Loading Issues
 
-If models fail to load:
-
-1. Check available RAM (models need sufficient memory)
-2. Verify model format (GGUF, ONNX, etc.)
-3. Check model compatibility: `lemonade list`
-4. Try a smaller model first
+1. Check available RAM/VRAM split (models need sufficient memory — see the GTT/VRAM guidance in the main docs)
+2. Verify the model format matches the backend (GGUF for llama.cpp/Ollama, ONNX for Ryzen AI hybrid models)
+3. Try a smaller model first
+4. For ROCm backends, confirm the environment: `cat /etc/profile.d/strix-halo-rocm.sh`
 
 ## Resources
 
@@ -201,7 +217,7 @@ If models fail to load:
 
 ## Version Information
 
-- Lemonade SDK: Latest stable release (installed via pip)
-- AI Backend Config: `/etc/strix-halo/ai/backend`
-- Installation Date: Stored in installation logs
-- GZ302 Setup Version: 4.2.0+
+- Installer module: `modules/llm.sh` (version in the module header)
+- Suite version: see `VERSION` at the repository root
+- ROCm environment: `/etc/profile.d/strix-halo-rocm.sh` (written by `configure_amd_gpu_env()`)
+- AI backend config file: none — backend choice is made interactively at install time

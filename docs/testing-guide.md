@@ -1,6 +1,6 @@
 # GZ302 Testing Guide — Strix Halo Edition
 
-**Current Version:** 6.6.4  
+**Current Version:** 6.9.0  
 **Status:** Unified Testing Framework for GZ302 & Strix Halo Platform
 
 ---
@@ -71,6 +71,9 @@ find . -name "*.sh" -type f -print0 | xargs -0 shellcheck
 
 # Device-profile regression coverage
 bash tests/device-manager-detection.sh
+
+# Detection-pipeline robustness (pipefail + capability-flag regressions)
+bash tests/detection-pipeline-robustness.sh
 
 # Generated content must stay in sync with the profile manifest
 bash scripts/sync-device-matrix.sh
