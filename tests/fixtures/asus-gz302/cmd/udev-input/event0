@@ -1,0 +1,10 @@
+DEVPATH=/devices/pci0000:00/0000:00:14.3/PNP0C09:00/PNP0C0D:00/input/input0/event0
+DEVNAME=/dev/input/event0
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=platform
+ID_PATH=pci-0000:00:14.3-platform-PNP0C0D:00
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:

@@ -1,0 +1,10 @@
+alsa-restore.service is-enabled static
+alsa-restore.service is-active active
+alsa-state.service is-enabled static
+alsa-state.service is-active inactive
+reload-hid_asus.service is-enabled not-found
+reload-hid_asus.service is-active inactive
+gz302-tablet.service is-enabled not-found
+gz302-tablet.service is-active inactive
+NetworkManager.service is-enabled enabled
+NetworkManager.service is-active active

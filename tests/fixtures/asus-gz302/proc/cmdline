@@ -1,0 +1,1 @@
+quiet nowatchdog splash rw rootflags=subvol=/@ root=UUID=00000000-0000-0000-0000-000000000000 amd_pstate=guided amdgpu.dcdebugmask=0x600

@@ -3,7 +3,7 @@
 # ==============================================================================
 # Strix Halo Linux Setup — Unified Installer
 # Author: th3cavalry using Copilot
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # Supported devices (Strix Halo platform — AMD Ryzen AI MAX / MAX+):
 # BEGIN AUTO-GENERATED SUPPORTED DEVICES
@@ -43,6 +43,15 @@ SKIP_TOOLS=false
 SKIP_MODULES=false
 SKIP_AI=false
 
+# Read-only modes.  Each of these applies nothing, needs no root, and must
+# branch before main() (which starts with check_root) is ever called.
+VERIFY_ONLY=false
+VERIFY_JSON=false
+PRINT_PROFILE_ONLY=false
+REPORT_MODE=false
+REPORT_OUT_DIR=""
+REPORT_LOGS=false
+
 print_supported_device_help() {
     # BEGIN AUTO-GENERATED SUPPORTED DEVICES HELP
     # AUTO-GENERATED from strix-halo-lib/device-profile-data.sh via scripts/sync-device-matrix.sh.
@@ -80,11 +89,29 @@ while [[ $# -gt 0 ]]; do
         --no-z13ctl)     SKIP_Z13CTL=true; shift ;;
         --no-tools)      SKIP_TOOLS=true; shift ;;
         --no-modules)    SKIP_MODULES=true; shift ;;
+        --verify)         VERIFY_ONLY=true; shift ;;
+        --json)           VERIFY_JSON=true; shift ;;
+        --print-profile)  PRINT_PROFILE_ONLY=true; shift ;;
+        --report)         REPORT_MODE=true; shift ;;
+        --report-logs)    REPORT_MODE=true; REPORT_LOGS=true; shift ;;
+        --report-out)
+            if [[ $# -lt 2 || "$2" == -* ]]; then
+                echo "--report-out requires a directory argument"; exit 1
+            fi
+            REPORT_OUT_DIR="$2"; REPORT_MODE=true; shift 2 ;;
+        --fixture-root)
+            if [[ $# -lt 2 || "$2" == -* ]]; then
+                echo "--fixture-root requires a directory argument"; exit 1
+            fi
+            [[ -d "$2" ]] || { echo "--fixture-root: no such directory: $2"; exit 1; }
+            export STRIX_HALO_FIXTURE_ROOT="$2"; shift 2 ;;
         -h|--help)
             cat << 'EOF'
-Strix Halo Linux Setup — Unified Installer v6.9.0
+Strix Halo Linux Setup — Unified Installer v6.10.0
 
 Usage: sudo ./strix-halo-setup.sh [OPTIONS]
+
+--verify, --print-profile and --report are the flags that do not need sudo.
 
 Options:
   -y, --assume-yes   Accept all defaults (non-interactive).
@@ -97,6 +124,23 @@ Options:
   --no-z13ctl        Skip z13ctl installation
   --no-tools         Skip display tools and tray app
   --no-modules       Skip optional modules
+  --verify           Check every applied fix against live kernel state and exit.
+                     Applies nothing. Needs no root; checks that require
+                     privilege report "unknown" rather than failing.
+                     Exit 0 = nothing rejected, 1 = the kernel rejected a setting.
+  --json             With --verify, emit the result as JSON on stdout instead of
+                     the human table. Same exit status. Status strings are
+                     live / pending / rejected / absent / unknown / na.
+  --print-profile    Print the detected device profile and exit. Needs no root.
+  --report           Write a shareable diagnostic bundle and exit. Needs no root.
+                     Serial numbers, MAC addresses, filesystem UUIDs, WiFi network
+                     names, your hostname and your username are removed before the
+                     file is written, and it is re-scanned afterwards to confirm.
+  --report-logs      As --report, plus a filtered kernel-log excerpt. Higher PII
+                     surface; only use it when a maintainer asks.
+  --report-out DIR   Write the bundle to DIR (default: your home directory)
+  --fixture-root DIR Read hardware state from a captured fixture instead of this
+                     machine. Only valid with --verify or --print-profile.
   -h, --help         Show this help message
 
 Sections (each prompted with Y/n):
@@ -119,13 +163,30 @@ EOF
     esac
 done
 
+# A fixture describes someone else's machine.  Letting the installer act on one
+# would write another device's configuration to this one, so the seam is only
+# ever honoured by the two read-only modes that merely report what they see.
+if [[ -n "${STRIX_HALO_FIXTURE_ROOT:-}" ]] \
+   && [[ "$VERIFY_ONLY" != "true" && "$PRINT_PROFILE_ONLY" != "true" ]]; then
+    echo "--fixture-root may only be used with --verify or --print-profile" >&2
+    exit 1
+fi
+
+# --json selects a renderer for --verify; on its own it would silently do
+# nothing, and on an applying run it would promise machine-readable output the
+# installer does not produce.  Refuse rather than mislead a script.
+if [[ "$VERIFY_JSON" == "true" && "$VERIFY_ONLY" != "true" ]]; then
+    echo "--json may only be used with --verify" >&2
+    exit 1
+fi
+
 # --- GitHub base URL ---
 # Exported: modules run in child shells (bash "$module"), so a plain
 # assignment would leave them falling back to their own upstream default.
 export GITHUB_RAW_URL="https://raw.githubusercontent.com/foolish-dev/strix-halo-linux-setup/main"
 
 # --- Version (read once at startup) ---
-SETUP_VERSION="6.9.0"
+SETUP_VERSION="6.10.0"
 
 # --- Script directory detection ---
 resolve_script_dir() {
@@ -195,7 +256,13 @@ load_library() {
 
 info "Loading libraries..."
 load_library "kernel-compat.sh"   || warning "Failed to load kernel-compat.sh"
-load_library "state-manager.sh"   || warning "Failed to load state-manager.sh"
+# probe-source.sh first: every other library reaches live state through it.
+# verify-manager.sh next: it reads no state, but verify_register must exist
+# before any consumer library is sourced or its registration is silently
+# skipped by its own `declare -F verify_register` guard.
+load_library "probe-source.sh"    || warning "Failed to load probe-source.sh"
+load_library "verify-manager.sh"  || warning "Failed to load verify-manager.sh"
+load_library "fixture-format.sh"  || warning "Failed to load fixture-format.sh"
 load_library "distro-manager.sh"  || warning "Failed to load distro-manager.sh"
 load_library "device-profile-data.sh" || warning "Failed to load device-profile-data.sh"
 load_library "device-manager.sh"  || warning "Failed to load device-manager.sh"
@@ -205,8 +272,7 @@ load_library "input-manager.sh"   || warning "Failed to load input-manager.sh"
 load_library "audio-manager.sh"   || warning "Failed to load audio-manager.sh"
 load_library "display-fix.sh"     || warning "Failed to load display-fix.sh"
 load_library "display-manager.sh" || warning "Failed to load display-manager.sh"
-
-state_init >/dev/null 2>&1 || true
+load_library "report-manager.sh"  || warning "Failed to load report-manager.sh"
 
 # ==============================================================================
 # Helper Functions
@@ -1303,5 +1369,53 @@ main() {
     fi
     echo
 }
+
+# ==============================================================================
+# Read-only dispatch
+#
+# main() begins with check_root, so every mode that applies nothing must branch
+# before it is called.  The `|| rc=$?` captures are load-bearing: a bare call
+# would abort under `set -e` before the `exit` ran, turning "the kernel rejected
+# a setting" (rc 1) or "the redaction self-check failed" (rc 1) into a silent
+# success.
+# ==============================================================================
+
+if [[ "$PRINT_PROFILE_ONLY" == "true" ]]; then
+    if ! declare -F device_detect >/dev/null 2>&1; then
+        echo "device-manager.sh is not available — cannot print the device profile" >&2
+        exit 2
+    fi
+    device_detect
+    device_print_profile
+    exit 0
+fi
+
+if [[ "$VERIFY_ONLY" == "true" ]]; then
+    if ! declare -F verify_run_report >/dev/null 2>&1; then
+        echo "verify-manager.sh is not available — cannot run --verify" >&2
+        exit 2
+    fi
+    verify_rc=0
+    if [[ "$VERIFY_JSON" == "true" ]]; then
+        if ! declare -F verify_run_report_json >/dev/null 2>&1; then
+            echo "this verify-manager.sh is too old for --json" >&2
+            exit 2
+        fi
+        verify_run_report_json || verify_rc=$?
+    else
+        verify_run_report || verify_rc=$?
+    fi
+    exit "$verify_rc"
+fi
+
+if [[ "$REPORT_MODE" == "true" ]]; then
+    if ! declare -F report_run >/dev/null 2>&1; then
+        echo "report-manager.sh is not available — cannot generate a report" >&2
+        exit 2
+    fi
+    report_rc=0
+    report_run "$REPORT_OUT_DIR" "$REPORT_LOGS" || report_rc=$?
+    exit "$report_rc"
+fi
 
 main "$@"

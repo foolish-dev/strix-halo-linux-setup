@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 Kernel Compatibility Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # This library provides central kernel version detection and compatibility
 # logic for all other libraries. It determines what workarounds are needed
@@ -27,14 +27,52 @@ set -euo pipefail
 #   kernel_requires_input_workaround
 # ==============================================================================
 
+if [[ -n "${_STRIX_KERNEL_COMPAT_LOADED:-}" ]]; then
+    return 0
+fi
+_STRIX_KERNEL_COMPAT_LOADED=1
+
+# The read seam.  The running kernel version is live system state, so it is
+# read through probe-source.sh's _probe_uname_r rather than a bare `uname -r`:
+# a fixture replay must answer kernel questions from the CAPTURE, never from
+# the replaying host, or a contributor's fixture would be evaluated against the
+# maintainer's kernel.
+#
+# Self-sourced (guarded) because tests source this library standalone, and
+# because strix-halo-setup.sh loads kernel-compat.sh before probe-source.sh.
+# probe-source.sh carries its own include guard, so the installer's later
+# `load_library "probe-source.sh"` is a harmless no-op.
+KERNEL_COMPAT_LIB_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+if ! declare -F _probe_uname_r >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${KERNEL_COMPAT_LIB_DIR}/probe-source.sh"
+fi
+
 # --- Version Constants ---
-readonly KERNEL_MIN=612          # 6.12 - Absolute minimum
-readonly KERNEL_RECOMMENDED=614  # 6.14 - First recommended
-readonly KERNEL_STABLE=616       # 6.16 - Stable support
-readonly KERNEL_NATIVE=617       # 6.17 - Native support for most hardware
-readonly KERNEL_OPTIMAL=618      # 6.18 - ROCm 7.2, firmware improvements
-readonly KERNEL_AUDIO_NATIVE=619 # 6.19 - CS35L41 audio native support
-readonly KERNEL_NEXT_MAJOR=700   # 7.0 - newer display stack behavior
+# Guarded rather than a bare `readonly`: this file is sourced by name from
+# several entry points, and a second source of a bare readonly assignment
+# fails, which under the installer-wide `set -e` aborts the caller.
+if [[ -z "${KERNEL_MIN:-}" ]]; then
+    readonly KERNEL_MIN=612          # 6.12 - Absolute minimum
+fi
+if [[ -z "${KERNEL_RECOMMENDED:-}" ]]; then
+    readonly KERNEL_RECOMMENDED=614  # 6.14 - First recommended
+fi
+if [[ -z "${KERNEL_STABLE:-}" ]]; then
+    readonly KERNEL_STABLE=616       # 6.16 - Stable support
+fi
+if [[ -z "${KERNEL_NATIVE:-}" ]]; then
+    readonly KERNEL_NATIVE=617       # 6.17 - Native support for most hardware
+fi
+if [[ -z "${KERNEL_OPTIMAL:-}" ]]; then
+    readonly KERNEL_OPTIMAL=618      # 6.18 - ROCm 7.2, firmware improvements
+fi
+if [[ -z "${KERNEL_AUDIO_NATIVE:-}" ]]; then
+    readonly KERNEL_AUDIO_NATIVE=619 # 6.19 - CS35L41 audio native support
+fi
+if [[ -z "${KERNEL_NEXT_MAJOR:-}" ]]; then
+    readonly KERNEL_NEXT_MAJOR=700   # 7.0 - newer display stack behavior
+fi
 
 # --- Core Version Functions ---
 
@@ -42,24 +80,36 @@ readonly KERNEL_NEXT_MAJOR=700   # 7.0 - newer display stack behavior
 # Returns: Version number (e.g., 617 for 6.17.4)
 # Output: None (return value only)
 kernel_get_version_num() {
+    local release
     local kernel_version
-    kernel_version=$(uname -r | cut -d. -f1,2)
     local major minor
-    major=$(echo "$kernel_version" | cut -d. -f1)
-    minor=$(echo "$kernel_version" | cut -d. -f2)
+
+    release=$(kernel_get_version_string) || release=""
+    # Strip the local-version suffix first ("7.2.2-1-cachyos" -> "7.2.2") so a
+    # release with no dot cannot make `cut -f2` echo the whole field back.
+    kernel_version="${release%%-*}"
+    major=$(cut -d. -f1 <<< "$kernel_version")
+    minor=$(cut -d. -f2 -s <<< "$kernel_version")
+    # A fixture replay with no uname-r capture yields an empty release, which
+    # must resolve to 0 (below every milestone) rather than to this host's
+    # kernel.  Same for anything else that is not a plain number.
+    [[ "$major" =~ ^[0-9]+$ ]] || major=0
+    [[ "$minor" =~ ^[0-9]+$ ]] || minor=0
     echo $((major * 100 + minor))
 }
 
 # Get full kernel version string
 # Returns: Full version (e.g., "6.17.4-arch1-1")
 kernel_get_version_string() {
-    uname -r
+    _probe_uname_r
 }
 
 # Get major.minor version string
 # Returns: Short version (e.g., "6.17")
 kernel_get_version_short() {
-    uname -r | cut -d. -f1,2
+    local release
+    release=$(kernel_get_version_string) || release=""
+    cut -d. -f1,2 <<< "$release"
 }
 
 # Check if kernel meets minimum requirements

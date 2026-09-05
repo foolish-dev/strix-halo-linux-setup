@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 GPU Manager Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # This library manages AMD Radeon 8060S (RDNA 3.5) integrated GPU configuration
 # for the GZ302 (Strix Halo platform).
@@ -23,6 +23,23 @@ set -euo pipefail
 #   gpu_verify_firmware
 # ==============================================================================
 
+GPU_MANAGER_LIB_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+# The single indirection seam.  Every read of live state below goes through a
+# _probe_* helper or a bare "${STRIX_HALO_FIXTURE_ROOT:-}" prefix, so a fixture
+# replay exercises the real bodies of these functions instead of a mock of them.
+# Writes keep their literal paths - a write that honoured the seam would
+# configure this machine from someone else's capture.
+if ! declare -F _probe_lspci_nn >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${GPU_MANAGER_LIB_DIR}/probe-source.sh"
+fi
+
+if ! declare -F verify_modprobe_option >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${GPU_MANAGER_LIB_DIR}/verify-manager.sh"
+fi
+
 # --- GPU Hardware Detection ---
 
 # Detect AMD Radeon 8060S GPU
@@ -32,7 +49,7 @@ gpu_detect_hardware() {
     # Radeon 8060S is integrated - check for Strix Halo device
     # PCI ID may vary, look for AMD/ATI device
     local pci_list gpu_info
-    pci_list=$(lspci 2>/dev/null) || pci_list=""
+    pci_list=$(_probe_lspci_nn) || pci_list=""
     if gpu_info=$(grep -i "VGA.*AMD\|Display.*AMD" <<< "$pci_list"); then
         echo "$gpu_info"
         return 0
@@ -44,8 +61,27 @@ gpu_detect_hardware() {
 # Get GPU device ID
 # Returns: Device ID string or "unknown"
 gpu_get_device_id() {
-    local device_id
-    device_id=$(lspci -nn | grep -i "VGA.*AMD\|Display.*AMD" | grep -oP '\[[\da-f]{4}:[\da-f]{4}\]' | head -1 | tr -d '[]')
+    # Capture-then-here-string, never a producer piped into a short-circuiting
+    # consumer.  The old single-pipeline form had two failure modes under the
+    # installer-wide `set -euo pipefail`:
+    #   * no AMD display device at all (any non-AMD host, and any of the ten
+    #     DMI-matched profiles whose GPU string differs) - `grep -i` exits 1 and
+    #     pipefail propagates it, so the assignment fails;
+    #   * many matching display functions - `head -1` closes the pipe early,
+    #     `grep -oP` dies of SIGPIPE and pipefail reports 141.
+    # Called directly that aborts the installer under errexit; called through
+    # `$( )` it silently yields the empty string and aborts the caller's own
+    # assignment instead (gpu_get_state line "device_id=$(gpu_get_device_id)",
+    # which then emits no JSON at all and takes gpu_print_status down with it).
+    # `grep -Ei 'A|B'` replaces `grep -i 'A\|B'` - identical semantics, one
+    # fewer escaping trap - and `grep -oE` replaces `grep -oP` because PCRE is
+    # not needed here and `grep -P` is absent on some minimal images.
+    local device_id pci_list matched ids
+    pci_list=$(_probe_lspci_nn) || pci_list=""
+    matched=$(grep -Ei 'VGA.*AMD|Display.*AMD' <<< "$pci_list") || matched=""
+    ids=$(grep -oE '\[[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\]' <<< "$matched") || ids=""
+    # head is the producer and tr the consumer, so neither can be SIGPIPEd.
+    device_id=$(head -n 1 <<< "$ids" | tr -d '[]') || device_id=""
     if [[ -n "$device_id" ]]; then
         echo "$device_id"
     else
@@ -60,7 +96,7 @@ gpu_get_device_id() {
 # Returns: the card name (e.g. "card1"), or 1 if no amdgpu-bound card is found.
 gpu_get_drm_card() {
     local card name driver
-    for card in /sys/class/drm/card*; do
+    for card in "${STRIX_HALO_FIXTURE_ROOT:-}"/sys/class/drm/card*; do
         name=$(basename "$card")
         [[ "$name" =~ ^card[0-9]+$ ]] || continue
         [[ -e "$card/device/driver" ]] || continue
@@ -86,7 +122,7 @@ gpu_get_drm_index() {
 gpu_module_loaded() {
     # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
     local modules
-    modules=$(lsmod 2>/dev/null) || return 1
+    modules=$(_probe_lsmod) || return 1
     grep -q "^amdgpu" <<< "$modules"
 }
 
@@ -104,7 +140,7 @@ gpu_get_firmware_dir() {
 gpu_get_ip_version() {
     local card base
     card=$(gpu_get_drm_card) || return 1
-    base="/sys/class/drm/${card}/device/ip_discovery/die/0/$1/0"
+    base="${STRIX_HALO_FIXTURE_ROOT:-}/sys/class/drm/${card}/device/ip_discovery/die/0/$1/0"
     [[ -r "$base/major" ]] || return 1
     printf '%s_%s_%s\n' "$(cat "$base/major")" "$(cat "$base/minor")" "$(cat "$base/revision")"
 }
@@ -146,10 +182,15 @@ gpu_verify_firmware() {
     dcn_ver=$(gpu_get_ip_version DMU) || dcn_ver="3_5_1"
 
     if [[ -z "$gc_ver" ]]; then
-        # Pre-discovery ASICs / older kernels: fall back to dmesg, then debugfs.
+        # Pre-discovery ASICs / older kernels: fall back to the kernel log,
+        # then debugfs.  Read it through _probe_kernel_log, not a bare `dmesg`:
+        # under kernel.dmesg_restrict=1 (the default on this flagship) dmesg
+        # fails for an unprivileged caller and reads back EMPTY, so the gc_*
+        # match below could never fire and the "11_5_1" default would silently
+        # look like a successful detection.  The probe is journalctl-first.
         gc_ver="11_5_1"
         local kernel_log
-        kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
+        kernel_log=$(_probe_kernel_log) || kernel_log=""
         if grep -q "gc_11_5_2" <<< "$kernel_log"; then
             gc_ver="11_5_2"
         elif grep -q "gc_12_0_1" <<< "$kernel_log"; then
@@ -228,25 +269,68 @@ gpu_verify_firmware() {
 
 # --- Configuration State Detection ---
 
-# Check if amdgpu ppfeaturemask is configured
+# The four amdgpu module parameters this toolkit declares, in the order they
+# are written to /etc/modprobe.d/amdgpu.conf.
+GPU_AMDGPU_OPTIONS=(ppfeaturemask abmlevel sg_display cwsr_enable)
+
+# --- Provenance -------------------------------------------------------------
+
+# Did WE write /etc/modprobe.d/amdgpu.conf?  Marker grep only - this answers
+# "is this file ours to remove", never "did the setting take effect".
+# Cleanup/uninstall guards use this one; apply short-circuits use _applied.
+gpu_amdgpu_config_is_ours() {
+    local conf="${STRIX_HALO_FIXTURE_ROOT:-}/etc/modprobe.d/amdgpu.conf"
+    [[ -f "$conf" ]] || return 1
+    grep -q 'AMD GPU configuration for Radeon 8060S' "$conf" 2>/dev/null
+}
+
+# --- Effect (tri-state) -----------------------------------------------------
+
+# Resolve one declared amdgpu option against the running kernel.
+# Args: $1 = parameter name
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL.
+# Call it DIRECTLY, never inside $( ) - a subshell discards VERIFY_DETAIL.
+#
+# The old body of gpu_ppfeaturemask_configured is preserved below only as the
+# boolean wrapper.  On its own it was a fourth instance of the bug class this
+# pass exists to remove: it grepped four strings out of a file this toolkit had
+# itself written and reported success without ever asking the kernel whether
+# amdgpu exists, exposes those parameters, or honoured them.
+gpu_amdgpu_option_status() {
+    # The literal path: verify_modprobe_option applies the fixture root itself
+    # where it reads, and echoes the real path back in VERIFY_DETAIL.
+    verify_modprobe_option /etc/modprobe.d/amdgpu.conf "$1"
+}
+
+gpu_ppfeaturemask_status()  { gpu_amdgpu_option_status ppfeaturemask; }
+gpu_abmlevel_status()       { gpu_amdgpu_option_status abmlevel; }
+gpu_sg_display_status()     { gpu_amdgpu_option_status sg_display; }
+gpu_cwsr_enable_status()    { gpu_amdgpu_option_status cwsr_enable; }
+
+# --- Compat wrapper ---------------------------------------------------------
+
+# Check if the amdgpu module options are configured AND not rejected.
+# True iff every one of the four resolves to LIVE (in effect now) or PENDING
+# (correctly declared, applies on the next boot).  ABSENT, REJECTED and UNKNOWN
+# are all false here, so a config the kernel will never honour no longer counts
+# as "already configured".
 # Returns: 0 if configured, 1 if not configured
 gpu_ppfeaturemask_configured() {
-    if [[ -f /etc/modprobe.d/amdgpu.conf ]]; then
-        if grep -q "ppfeaturemask=0xffff7fff" /etc/modprobe.d/amdgpu.conf 2>/dev/null && \
-           grep -q "abmlevel=0" /etc/modprobe.d/amdgpu.conf 2>/dev/null && \
-           grep -q "sg_display=0" /etc/modprobe.d/amdgpu.conf 2>/dev/null && \
-           grep -q "cwsr_enable=0" /etc/modprobe.d/amdgpu.conf 2>/dev/null; then
-            return 0
-        fi
-    fi
-    return 1
+    local p rc
+    for p in "${GPU_AMDGPU_OPTIONS[@]}"; do
+        rc=0
+        gpu_amdgpu_option_status "$p" || rc=$?
+        [[ $rc -eq $VERIFY_LIVE || $rc -eq $VERIFY_PENDING ]] || return 1
+    done
+    return 0
 }
 
 # Get current ppfeaturemask value
 # Returns: Current value or "not_set"
 gpu_get_ppfeaturemask() {
-    if [[ -f /sys/module/amdgpu/parameters/ppfeaturemask ]]; then
-        cat /sys/module/amdgpu/parameters/ppfeaturemask
+    local mask_path="${STRIX_HALO_FIXTURE_ROOT:-}/sys/module/amdgpu/parameters/ppfeaturemask"
+    if [[ -f "$mask_path" ]]; then
+        cat "$mask_path"
     else
         echo "not_set"
     fi
@@ -347,13 +431,17 @@ EOF
 # Apply amdgpu modprobe configuration (idempotent)
 # Returns: 0 if applied or already applied
 gpu_apply_modprobe_config() {
-    # Check if already configured
+    # Check if already configured AND actually honoured by the kernel.
     if gpu_ppfeaturemask_configured; then
         return 0  # Already configured
     fi
-    
-    # Create modprobe configuration
-    cat > /etc/modprobe.d/amdgpu.conf <<'EOF'
+
+    # Build the desired content first and compare it with what is on disk.  A
+    # REJECTED option (amdgpu built in, renamed, a parameter dropped upstream)
+    # makes the check above false on every run, and without this guard each run
+    # would rewrite an already-identical file and rebuild the initramfs again.
+    local desired current
+    desired=$(cat <<'EOF'
 # AMD GPU configuration for Radeon 8060S (RDNA 3.5, integrated)
 # Strix Halo specific: Phoenix/Navi33 equivalent
 # Enable all power features for better performance and efficiency
@@ -373,7 +461,23 @@ options amdgpu sg_display=0
 # caused by register file synchronization issues in early 2026 kernels.
 options amdgpu cwsr_enable=0
 EOF
-    
+)
+
+    # `if`, not `[[ ... ]] && ...`: as the last statement of a group the latter
+    # returns 1 when the file is absent and errexit would abort the installer.
+    current=""
+    if [[ -f /etc/modprobe.d/amdgpu.conf ]]; then
+        current=$(cat /etc/modprobe.d/amdgpu.conf 2>/dev/null) || current=""
+    fi
+
+    if [[ "$desired" == "$current" ]]; then
+        # Byte-identical already: no write, and no initramfs rebuild either.
+        return 0
+    fi
+
+    # Literal path on the write.  The fixture seam is read-only by definition.
+    printf '%s\n' "$desired" > /etc/modprobe.d/amdgpu.conf
+
     # Verify creation
     if [[ ! -f /etc/modprobe.d/amdgpu.conf ]]; then
         return 1
@@ -548,9 +652,13 @@ gpu_verify_working() {
         status=1
     fi
     
-    # Check for kernel errors
-    local gpu_log
-    gpu_log=$(dmesg 2>/dev/null | tail -200) || gpu_log=""
+    # Check for kernel errors.  Capture through the probe seam, then slice
+    # with a here-string: `_probe_kernel_log | tail` would make an unreadable
+    # log and a clean log indistinguishable, and a bare `dmesg` reads back
+    # empty under kernel.dmesg_restrict=1.
+    local kernel_log gpu_log
+    kernel_log=$(_probe_kernel_log) || kernel_log=""
+    gpu_log=$(tail -200 <<< "$kernel_log") || gpu_log=""
     if grep -qi "amdgpu.*error\|amdgpu.*fail" <<< "$gpu_log"; then
         echo "WARNING: Recent GPU errors in kernel log"
         status=1
@@ -571,6 +679,20 @@ gpu_verify_working() {
 
 # --- Status Functions ---
 
+# Read one `"key": "value"` field out of a gpu_get_state() blob.
+#
+# `echo "$state" | grep KEY | cut -d'"' -f4` is the producer-into-pipeline shape
+# that misreported present hardware as absent in 130a6a9.  The installer sources
+# every library into one shell under `set -euo pipefail`, so a key the blob does
+# not carry makes grep — and therefore the whole pipeline — non-zero, and the
+# caller dies half-way through printing its own status.  Capture first, match
+# with a here-string, and let a missing key yield an empty value instead.
+_gpu_state_field() {
+    local blob="$1" key="$2" line
+    line=$(grep -m1 "\"${key}\":" <<< "$blob") || return 0
+    cut -d'"' -f4 <<< "$line"
+}
+
 # Print comprehensive GPU status (for user display)
 # Output: Formatted status information
 gpu_print_status() {
@@ -584,12 +706,12 @@ gpu_print_status() {
     local firmware_complete
     local current_mask
     
-    hardware_present=$(echo "$state" | grep "hardware_present" | cut -d'"' -f4)
-    device_id=$(echo "$state" | grep "device_id" | cut -d'"' -f4)
-    module_loaded=$(echo "$state" | grep "module_loaded" | cut -d'"' -f4)
-    ppfeaturemask_configured=$(echo "$state" | grep "ppfeaturemask_configured" | cut -d'"' -f4)
-    firmware_complete=$(echo "$state" | grep "firmware_complete" | cut -d'"' -f4)
-    current_mask=$(echo "$state" | grep "current_ppfeaturemask" | cut -d'"' -f4)
+    hardware_present=$(_gpu_state_field "$state" "hardware_present")
+    device_id=$(_gpu_state_field "$state" "device_id")
+    module_loaded=$(_gpu_state_field "$state" "module_loaded")
+    ppfeaturemask_configured=$(_gpu_state_field "$state" "ppfeaturemask_configured")
+    firmware_complete=$(_gpu_state_field "$state" "firmware_complete")
+    current_mask=$(_gpu_state_field "$state" "current_ppfeaturemask")
     
     echo "GPU Status (AMD Radeon 8060S):"
     echo "  Hardware Present:    $hardware_present"
@@ -636,7 +758,16 @@ Firmware Functions:
   gpu_verify_firmware           - Verify all required firmware files
 
 State Check Functions:
-  gpu_ppfeaturemask_configured  - Check if ppfeaturemask is configured
+  gpu_ppfeaturemask_configured  - True iff all four amdgpu options are
+                                  LIVE or PENDING (boolean wrapper)
+  gpu_amdgpu_config_is_ours     - Provenance: did we write amdgpu.conf?
+  gpu_amdgpu_option_status <p>  - Tri-state VERIFY_* code for one option,
+                                  sets VERIFY_DETAIL (call it directly,
+                                  never inside $( ))
+  gpu_ppfeaturemask_status      - Tri-state status for ppfeaturemask
+  gpu_abmlevel_status           - Tri-state status for abmlevel
+  gpu_sg_display_status         - Tri-state status for sg_display
+  gpu_cwsr_enable_status        - Tri-state status for cwsr_enable
   gpu_get_ppfeaturemask         - Get current ppfeaturemask value
   gpu_kernel_params_set         - Check if kernel params are set
   gpu_get_state                 - Get comprehensive state (JSON)
@@ -685,3 +816,18 @@ Design Principles:
   - Clear state reporting
 HELP
 }
+
+# ==============================================================================
+# Verification registry
+#
+# Guarded so a standalone `source strix-halo-lib/gpu-manager.sh` still works
+# when verify-manager.sh was not loaded; verify_register de-duplicates on the
+# status function, so a double source cannot duplicate a row.
+# ==============================================================================
+
+if declare -F verify_register >/dev/null 2>&1; then
+    verify_register gpu "amdgpu ppfeaturemask" gpu_ppfeaturemask_status
+    verify_register gpu "amdgpu abmlevel"      gpu_abmlevel_status
+    verify_register gpu "amdgpu sg_display"    gpu_sg_display_status
+    verify_register gpu "amdgpu cwsr_enable"   gpu_cwsr_enable_status
+fi

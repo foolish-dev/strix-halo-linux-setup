@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 Display Fix Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # This library provides display-specific fixes for OLED panels on GZ302.
 # Focuses on all eDP power-saving features that can cause display artifacts.
@@ -27,7 +27,33 @@ set -euo pipefail
 #   display_apply_psr_su_fix
 # ==============================================================================
 
-readonly DISPLAY_MANAGED_DCDEBUGMASK_BITS=0xe12
+# The mask bits this library owns.  Guarded rather than a bare `readonly`:
+# this file is sourced by name from several entry points, and a second
+# source of a bare readonly assignment fails, which under the
+# installer-wide `set -e` aborts the caller.
+if [[ -z "${DISPLAY_MANAGED_DCDEBUGMASK_BITS:-}" ]]; then
+    readonly DISPLAY_MANAGED_DCDEBUGMASK_BITS=0xe12
+fi
+
+# The tri-state verification vocabulary lives in verify-manager.sh.  Sourced
+# here (guarded, so a standalone source of this library still works) because
+# a bootloader configuration file is NOT evidence that the kernel got the
+# parameter: on Limine the file can be regenerated or simply not read.
+DISPLAY_FIX_LIB_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+# The single indirection seam.  Every read of live state below goes through a
+# _probe_* helper or a bare "${STRIX_HALO_FIXTURE_ROOT:-}" prefix, so a fixture
+# replay exercises the real bodies of these functions instead of a mock of them.
+# Writes keep their literal paths.
+if ! declare -F _probe_uname_r >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${DISPLAY_FIX_LIB_DIR}/probe-source.sh"
+fi
+
+if ! declare -F verify_cmdline_option >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${DISPLAY_FIX_LIB_DIR}/verify-manager.sh"
+fi
 
 display_get_target_dcdebugmask_value() {
     local param
@@ -126,6 +152,33 @@ display_ensure_limine_default_param() {
 # Check if PSR-SU is currently enabled
 # Returns: 0 if enabled, 1 if disabled
 display_psr_su_enabled() {
+    # The running kernel is the only authority on what this boot actually got,
+    # and it is consulted here for the one answer the bootloader file cascade
+    # below cannot give: a file may declare the mask while the kernel that is
+    # running never received it.  Verified live: /proc/cmdline says
+    # amdgpu.dcdebugmask=0x600 while /sys/module/amdgpu/parameters/dcdebugmask
+    # says 1536 — the masked arithmetic comparison normalises both spellings.
+    #
+    # A live MATCH deliberately does NOT short-circuit to "already fixed".  The
+    # caller (strix-halo-setup.sh) uses this to decide whether to write the
+    # bootloader files at all, and a mask that is live on this boot but declared
+    # in no file is exactly the state a kernel update leaves behind: skipping the
+    # apply there would silently drop the fix at the next reboot.  Only a
+    # persistent declaration, found by the cascade below, may end this function
+    # with "no work to do".
+    #
+    # A live MISMATCH is decisive in the other direction: whatever the files say,
+    # PSR-SU is enabled on the kernel the user is running right now.
+    local live_mask target
+    if live_mask=$(verify_cmdline_param_value amdgpu.dcdebugmask); then
+        target=$(display_get_target_dcdebugmask_value)
+        if ! { [[ "$live_mask" =~ ^(0[xX][0-9A-Fa-f]+|[0-9]+)$ ]] &&
+               (( (live_mask & DISPLAY_MANAGED_DCDEBUGMASK_BITS) == \
+                  (target & DISPLAY_MANAGED_DCDEBUGMASK_BITS) )); }; then
+            return 0  # the running kernel has the wrong mask: PSR-SU is enabled
+        fi
+    fi
+
     # Check if dcdebugmask matches the kernel-appropriate display fix bits.
     if [[ -f /etc/default/grub ]]; then
         if display_has_target_dcdebugmask /etc/default/grub; then
@@ -176,14 +229,37 @@ display_psr_su_enabled() {
     return 0
 }
 
-# Check if PSR-SU fix has been applied
-# Returns: 0 if fix applied, 1 if not applied
+# Tri-state effect resolver: sets VERIFY_DETAIL, returns a VERIFY_* code.
+# Call it directly, never inside $( ) — a subshell would discard VERIFY_DETAIL.
+#
+# This is what catches a parameter written into a file the bootloader is not
+# reading: verify_cmdline_option reports REJECTED when the key is absent from
+# /proc/cmdline but present in a declaring file whose mtime predates this boot,
+# and PENDING when that file is newer than the boot, so a fresh --fixes-only
+# immediately followed by a check can never raise a false alarm.
+#
+# Deliberately no debugfs probe of /sys/kernel/debug/dri/*/amdgpu_dm_debug_mask:
+# it is unreadable as a normal user, so it could only ever return UNKNOWN for
+# the audience --verify exists for.
+display_psr_su_status() {
+    local target
+    target=$(display_get_target_dcdebugmask_value)
+    # Bare real paths: verify_cmdline_option applies STRIX_HALO_FIXTURE_ROOT
+    # itself where it reads them, and hands the unrooted path to the mtime probe.
+    verify_cmdline_option amdgpu.dcdebugmask "$target" "$DISPLAY_MANAGED_DCDEBUGMASK_BITS" \
+        /etc/default/limine /etc/kernel/cmdline /etc/default/grub \
+        /etc/limine/limine.conf /boot/limine/limine.conf \
+        /boot/limine.cfg /boot/limine.conf /boot/refind_linux.conf \
+        /boot/EFI/refind/refind.conf /boot/efi/EFI/refind/refind.conf \
+        /efi/EFI/refind/refind.conf
+}
+
+# Check if PSR-SU fix has been applied — compat wrapper over the resolver.
+# Returns: 0 if fix applied (LIVE or PENDING), 1 if not applied
 display_psr_su_fix_applied() {
-    if display_psr_su_enabled; then
-        return 1  # PSR enabled, fix not applied
-    else
-        return 0  # PSR disabled, fix applied
-    fi
+    local rc=0
+    display_psr_su_status || rc=$?
+    [[ $rc -eq $VERIFY_LIVE || $rc -eq $VERIFY_PENDING ]]
 }
 
 # --- PSR-SU Fix Application ---
@@ -480,15 +556,16 @@ display_verify_psr_su_fix() {
     fi
     
     # Check kernel version
-    local kver
-    kver=$(uname -r | cut -d. -f1,2)
+    local kernel_release kver
+    kernel_release=$(_probe_uname_r) || kernel_release=""
+    kver=$(cut -d. -f1,2 <<< "$kernel_release")
     local major minor
     major=$(echo "$kver" | cut -d. -f1)
     minor=$(echo "$kver" | cut -d. -f2)
     local version_num=$((major * 100 + minor))
     
     if [[ $version_num -ge 612 ]]; then
-        echo "  ✓ Kernel $(uname -r | cut -d. -f1,2) — using 0x600 display mask"
+        echo "  ✓ Kernel $kver — using 0x600 display mask"
     else
         echo "  ⚠️  Kernel < 6.12 - manual PSR-SU disable recommended"
         status=1
@@ -548,12 +625,12 @@ display_print_psr_su_status() {
 # --- Library Information ---
 
 display_fix_lib_version() {
-    echo "6.9.0"
+    echo "6.10.0"
 }
 
 display_fix_lib_help() {
     cat <<'HELP'
-GZ302 Display Fix Library v6.9.0
+GZ302 Display Fix Library v6.10.0
 
 PSR/Replay/IPS Detection Functions:
   display_psr_su_enabled        - Check if display fix bits are set
@@ -598,3 +675,9 @@ Example Usage:
   display_verify_psr_su_fix
 HELP
 }
+
+# --- Verification Registry ---
+
+if declare -F verify_register >/dev/null 2>&1; then
+    verify_register display "PSR-SU / Replay mask" display_psr_su_status
+fi

@@ -1,0 +1,8 @@
+etc/default/limine 1787866481
+etc/modprobe.d/amdgpu.conf 1787866439
+etc/modprobe.d/hid-asus.conf 1787866471
+etc/modprobe.d/i2c-hid-acpi-gz302.conf 1787866471
+etc/udev/hwdb.d/90-gz302-remap.hwdb 1787872653
+etc/udev/rules.d/64-limesuite.rules 1761691680
+etc/udev/rules.d/99-gz302-keyboard.rules 1787866471
+etc/udev/rules.d/99-z13ctl.rules 1787872656

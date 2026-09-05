@@ -1,6 +1,6 @@
 # GZ302 Testing Guide — Strix Halo Edition
 
-**Current Version:** 6.9.0  
+**Current Version:** 6.10.0  
 **Status:** Unified Testing Framework for GZ302 & Strix Halo Platform
 
 ---
@@ -57,6 +57,28 @@ The Command Center is the most visible component and requires rigorous UI/UX val
 - [ ] **Audio (CS35L41)**: Verify both speakers are active and balanced.
 - [ ] **Suspend/Resume**: Verify system wakes correctly without GPU hangs or WiFi dropouts.
 
+### Applied-Fix Verification (on hardware)
+
+```bash
+./strix-halo-setup.sh --verify        # no sudo
+```
+
+Proves every registered fix from live kernel state — `/sys/module/*/parameters`,
+`/proc/cmdline`, `systemctl`, udev properties — never from the config file the
+installer wrote. Each row reports `LIVE`, `REBOOT`, `REJECT`, not-applied,
+unknown or n/a; the process exits 1 only when something is `REJECT`.
+
+- [ ] **Unfixed GZ302**: expect **exit 1 with two `[REJECT]` rows** — `fnlock
+      default` (`hid_asus` exposes no `fnlock_default` parameter) and `i2c-hid
+      quirk` (`i2c_hid_acpi` exposes no `quirks` parameter). Those two rejections
+      are the reference case the whole verification layer was built around; if
+      they stop appearing on an unfixed machine, the layer has regressed, not
+      the hardware.
+- [ ] **After applying fixes**: re-run and confirm the previously rejected rows
+      are gone rather than silently re-reported as applied.
+- [ ] **Non-GZ302 devices**: rows gated on a capability this device lacks must
+      report `n/a`, never `REJECT`.
+
 ---
 
 ## 3. Automated Validation
@@ -81,7 +103,21 @@ git diff --exit-code README.md strix-halo-setup.sh docs/technical/external-integ
 
 # Version contract validation
 bash tests/validate-version-sync.sh
+
+# Tri-state verification layer (VERIFY_* codes, resolvers, the registry)
+bash tests/verify-layer.sh
+
+# Replay committed hardware fixtures through the real detection code
+bash tests/device-fixture-replay.sh
+
+# Prove no serial, MAC or filesystem UUID reached a committed fixture
+bash tests/fixture-sanitization-lint.sh tests/fixtures
+
+# Prove --report strips identifying data from the bundle it writes
+bash tests/report-redaction.sh
 ```
+
+All of the above run with no root, no package installs and no hardware.
 
 ### Python/PyQt6 Sanity
 ```bash
@@ -114,5 +150,5 @@ python3 -m py_compile command-center/src/modules/*.py
 
 ---
 
-**Last Updated:** 2026-05-16  
-**Status:** Updated for manifest-driven device metadata, generated matrix sync, and repository version validation.
+**Last Updated:** 2026-09-05  
+**Status:** Updated for the tri-state verification layer (`--verify`), the diagnostic bundle (`--report`) and device-fixture replay, alongside manifest-driven device metadata, generated matrix sync, and repository version validation.

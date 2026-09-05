@@ -1,0 +1,10 @@
+DEVPATH=/devices/platform/ACPI0011:00/gpio-keys.1.auto/input/input31/event17
+DEVNAME=/dev/input/event17
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=platform
+ID_PATH=platform-gpio-keys.1.auto
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:

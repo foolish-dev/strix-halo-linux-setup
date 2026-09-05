@@ -1,6 +1,13 @@
+import json
+import os
 import re
+import shutil
 import subprocess
+import threading
+import time
 from pathlib import Path
+
+from PyQt6.QtCore import QObject, pyqtSignal
 
 # z13ctl valid profiles: quiet, balanced, performance, custom
 # We map our 7 tray profiles to z13ctl profiles + explicit TDP overrides.
@@ -529,3 +536,259 @@ class PowerController:
         except Exception:
             pass
         return {"percent": None, "plugged": None, "status": "unknown"}
+
+
+# ==============================================================================
+# Applied-fix verification
+#
+# `strix-halo-setup.sh --verify --json` is the installer's own tri-state view of
+# what it applied, rendered machine-readably.  The dashboard reads it and does
+# nothing else with it: this class never applies, repairs or elevates anything,
+# so it needs no root and never prompts for a password.
+#
+# The one state that matters most here is "pending" — configured correctly but
+# only live after a reboot.  The dashboard had no way to say that at all.
+# ==============================================================================
+
+# The installer's status strings, worst first.  This ordering is what puts the
+# rows a user can act on at the top of the dashboard's list.
+VERIFY_STATUS_ORDER = ("rejected", "pending", "unknown", "absent", "live", "na")
+
+# Statuses worth showing a user.  "absent" means a fix was never applied (a
+# deliberate choice on most machines) and "na" means the device does not have
+# the hardware, so neither is a problem to report.
+VERIFY_ATTENTION = ("rejected", "pending")
+
+_VERIFY_ENV_OVERRIDE = "STRIX_HALO_SETUP"
+
+
+class FixVerificationController(QObject):
+    """Reads the installer's --verify --json state, off the GUI thread.
+
+    Results come back through a signal, never through QTimer.singleShot():
+    singleShot() is silently a no-op when called from a plain threading.Thread
+    (no event dispatcher on that thread), which is exactly how an earlier
+    version of the RGB worker lost its notifications.
+    """
+
+    # Carries the parsed snapshot dict, or None when it could not be produced.
+    updated = pyqtSignal(object)
+
+    # A verification run is cheap (~0.4 s on the flagship) but it shells out and
+    # reads journalctl, so it is refreshed on demand rather than on the 3 s poll.
+    MIN_REFRESH_INTERVAL = 300.0
+    RUN_TIMEOUT = 45
+
+    def __init__(self):
+        super().__init__()
+        self._snapshot = None
+        self._lock = threading.Lock()
+        self._running = False
+        self._last_run = 0.0
+        self.installer = self._find_installer()
+
+    # ------------------------------------------------------------------
+    # Discovery
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _candidate_paths():
+        """Where the installer might be, best first.
+
+        The dashboard is installed system-wide but the installer itself stays in
+        whatever checkout the user ran it from, so there is no single answer —
+        hence the env override, which is the only reliable one.
+        """
+        override = os.environ.get(_VERIFY_ENV_OVERRIDE, "").strip()
+        if override:
+            yield Path(override)
+
+        try:
+            # modules/power_controller.py -> src -> command-center -> repo root
+            yield Path(__file__).resolve().parents[3] / "strix-halo-setup.sh"
+        except IndexError:
+            pass
+
+        for path in (
+            "/usr/local/share/strix-halo/strix-halo-setup.sh",
+            "/opt/strix-halo-linux-setup/strix-halo-setup.sh",
+        ):
+            yield Path(path)
+
+        try:
+            home = Path.home()
+        except Exception:
+            home = None
+        if home is not None:
+            yield home / "strix-halo-linux-setup" / "strix-halo-setup.sh"
+            yield home / ".local" / "share" / "strix-halo" / "strix-halo-setup.sh"
+
+        found = shutil.which("strix-halo-setup.sh")
+        if found:
+            yield Path(found)
+
+    @classmethod
+    def _find_installer(cls):
+        for candidate in cls._candidate_paths():
+            try:
+                if candidate.is_file() and os.access(candidate, os.R_OK):
+                    return candidate
+            except OSError:
+                continue
+        return None
+
+    def available(self):
+        return self.installer is not None
+
+    def snapshot(self):
+        return self._snapshot
+
+    # ------------------------------------------------------------------
+    # Running it
+    # ------------------------------------------------------------------
+    def refresh_async(self, force=False):
+        """Kick a background run.  Returns True when one was actually started.
+
+        Everything that could fail — no installer, one already in flight, too
+        soon since the last — is answered with a quiet False.  A dashboard that
+        cannot tell you about verification is not a dashboard that should stop
+        working.
+        """
+        if self.installer is None:
+            return False
+        with self._lock:
+            if self._running:
+                return False
+            if not force and self._last_run and \
+                    (time.monotonic() - self._last_run) < self.MIN_REFRESH_INTERVAL:
+                return False
+            self._running = True
+        threading.Thread(target=self._worker, daemon=True).start()
+        return True
+
+    def _worker(self):
+        snapshot = None
+        try:
+            snapshot = self._run_verify()
+        except Exception:
+            snapshot = None
+        finally:
+            with self._lock:
+                self._running = False
+                self._last_run = time.monotonic()
+        if snapshot is not None:
+            self._snapshot = snapshot
+        try:
+            self.updated.emit(snapshot)
+        except Exception:
+            pass
+
+    def _run_verify(self):
+        env = dict(os.environ)
+        # A fixture root describes someone else's machine; the dashboard must
+        # always report on THIS one, whatever is exported in the session.
+        env.pop("STRIX_HALO_FIXTURE_ROOT", None)
+        try:
+            result = subprocess.run(
+                ["bash", str(self.installer), "--verify", "--json"],
+                capture_output=True,
+                text=True,
+                timeout=self.RUN_TIMEOUT,
+                cwd=str(self.installer.parent),
+                env=env,
+            )
+        except Exception:
+            return None
+        # 0 = nothing rejected, 1 = something is rejected: both are real answers.
+        # Anything else (2 = library missing, or an installer too old to know
+        # --json and printing "Unknown option") is not.
+        if result.returncode not in (0, 1):
+            return None
+        return self._parse(result.stdout)
+
+    @staticmethod
+    def _parse(text):
+        """Parse and shape-check the document.  None on anything unexpected."""
+        try:
+            data = json.loads(text)
+        except Exception:
+            return None
+        if not isinstance(data, dict):
+            return None
+        if data.get("schema") != "strix-halo-verify":
+            return None
+        checks = data.get("checks")
+        summary = data.get("summary")
+        if not isinstance(checks, list) or not isinstance(summary, dict):
+            return None
+
+        clean = []
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            status = str(check.get("status") or "unknown")
+            if status not in VERIFY_STATUS_ORDER:
+                status = "unknown"
+            clean.append({
+                "id": str(check.get("id") or ""),
+                "component": str(check.get("component") or ""),
+                "label": str(check.get("label") or ""),
+                "status": status,
+                "detail": str(check.get("detail") or ""),
+            })
+
+        counts = {}
+        for key in VERIFY_STATUS_ORDER:
+            try:
+                counts[key] = int(summary.get(key, 0))
+            except (TypeError, ValueError):
+                counts[key] = 0
+
+        return {
+            "device": str(data.get("device") or "unknown"),
+            "kernel": str(data.get("kernel") or "unknown"),
+            "checks": clean,
+            "counts": counts,
+        }
+
+    # ------------------------------------------------------------------
+    # Presentation helpers (pure; safe to call from the GUI thread)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def attention_rows(snapshot):
+        """Rejected first, then pending — the rows a user can act on."""
+        if not snapshot:
+            return []
+        rows = [c for c in snapshot["checks"] if c["status"] in VERIFY_ATTENTION]
+        rows.sort(key=lambda c: VERIFY_STATUS_ORDER.index(c["status"]))
+        return rows
+
+    @staticmethod
+    def headline(snapshot):
+        """(text, tone) for the dashboard.  tone: bad | warn | ok | idle."""
+        if not snapshot:
+            return ("Applied fixes not checked", "idle")
+        counts = snapshot["counts"]
+        rejected, pending = counts["rejected"], counts["pending"]
+        live = counts["live"]
+        if rejected:
+            noun = "fix is" if rejected == 1 else "fixes are"
+            return (f"{rejected} {noun} being ignored by this kernel", "bad")
+        if pending:
+            noun = "fix needs" if pending == 1 else "fixes need"
+            return (f"{pending} {noun} a reboot to take effect", "warn")
+        if live:
+            return (f"{live} applied fixes verified live", "ok")
+        return ("No applied fixes to verify", "idle")
+
+    @classmethod
+    def summary_line(cls, snapshot):
+        """One compact line for the tray menu and tooltip."""
+        if not snapshot:
+            return None
+        counts = snapshot["counts"]
+        parts = [f"{counts['live']} live"]
+        if counts["pending"]:
+            parts.append(f"{counts['pending']} awaiting reboot")
+        if counts["rejected"]:
+            parts.append(f"{counts['rejected']} rejected")
+        return " · ".join(parts)

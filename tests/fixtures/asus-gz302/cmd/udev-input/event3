@@ -1,0 +1,10 @@
+DEVPATH=/devices/pci0000:00/0000:00:08.1/acpi.video_bus.0/input/input3/event3
+DEVNAME=/dev/input/event3
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=pci
+ID_PATH=pci-0000:00:08.1
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:

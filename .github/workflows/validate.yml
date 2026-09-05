@@ -72,6 +72,42 @@ jobs:
       - name: Run detection pipeline robustness checks
         run: bash tests/detection-pipeline-robustness.sh
 
+  verification-layer:
+    name: Verification Layer Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run verification layer regression checks
+        run: bash tests/verify-layer.sh
+
+  hardware-fixtures:
+    name: Hardware Fixture Replay
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Lint fixtures for hardware identifiers
+        run: bash tests/fixture-sanitization-lint.sh tests/fixtures
+
+      - name: Replay real-hardware fixtures through the real detection code
+        run: bash tests/device-fixture-replay.sh
+
+  report-redaction:
+    name: Diagnostic Report Redaction
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run redaction and fixture-integrity checks
+        run: bash tests/report-redaction.sh
+
   python-sanity:
     name: Command Center Python Sanity
     runs-on: ubuntu-latest

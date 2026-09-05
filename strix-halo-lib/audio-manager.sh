@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # Strix Halo Audio Manager Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # This library manages audio configuration for the supported Strix Halo device
 # matrix, including:
@@ -26,6 +26,21 @@ set -euo pipefail
 #   audio_apply_configuration
 # ==============================================================================
 
+AUDIO_MANAGER_LIB_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+# The read seam: every probe of live system state goes through probe-source.sh
+# so a fixture replay exercises the real bodies below instead of a mock of them.
+if ! declare -F _probe_lspci_nn >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${AUDIO_MANAGER_LIB_DIR}/probe-source.sh"
+fi
+
+# Tri-state verification vocabulary (VERIFY_* codes, verify_softdep, ...).
+if ! declare -F verify_softdep >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${AUDIO_MANAGER_LIB_DIR}/verify-manager.sh"
+fi
+
 # --- Audio Hardware Detection ---
 
 # Detect audio controller
@@ -33,7 +48,10 @@ set -euo pipefail
 # Output: Audio controller information
 audio_detect_controller() {
     local pci_list audio_info
-    pci_list=$(lspci 2>/dev/null) || pci_list=""
+    # -nn form: the match count is identical to bare `lspci` on this hardware,
+    # so control flow is unchanged; the echoed line simply gains the [1002:1640]
+    # style PCI id.  One capture then covers every lspci reader in the suite.
+    pci_list=$(_probe_lspci_nn) || pci_list=""
     if audio_info=$(grep -i "audio.*amd\|audio.*advanced micro" <<< "$pci_list"); then
         echo "$audio_info"
         return 0
@@ -46,26 +64,48 @@ audio_detect_controller() {
 # Returns: 0 if detected, 1 if not detected
 audio_detect_cs35l41() {
     # Check /proc/asound/cards for CS35L41
-    if [[ -r /proc/asound/cards ]] && grep -qi "cs35l41" /proc/asound/cards 2>/dev/null; then
+    if [[ -r "${STRIX_HALO_FIXTURE_ROOT:-}/proc/asound/cards" ]] && \
+       grep -qi "cs35l41" "${STRIX_HALO_FIXTURE_ROOT:-}/proc/asound/cards" 2>/dev/null; then
         return 0
     fi
     
     # Check loaded modules: on Strix Halo the amps are I2C/SPI attached, so they
     # appear as snd_hda_scodec_cs35l41* modules rather than in lspci or aplay -l.
     local modules
-    modules=$(lsmod 2>/dev/null) || modules=""
+    modules=$(_probe_lsmod) || modules=""
     if grep -q "cs35l41" <<< "$modules"; then
         return 0
     fi
 
-    # Check dmesg for CS35L41 driver messages
+    # Check the kernel log for CS35L41 driver messages.  dmesg is denied to a
+    # non-root user here (kernel.dmesg_restrict=1); _probe_kernel_log reads
+    # journalctl -k first and falls back to dmesg.
     local kernel_log
-    kernel_log=$(dmesg 2>/dev/null) || kernel_log=""
+    kernel_log=$(_probe_kernel_log) || kernel_log=""
     if grep -qi "cs35l41" <<< "$kernel_log"; then
         return 0
     fi
     
     return 1
+}
+
+# Which side-codec module do these amplifiers need?
+# The module is named for the bus the amps sit on
+# (snd-hda-scodec-cs35l41-{i2c,spi}); there has never been a module called
+# "cs35l41_hda", so a softdep naming it is silently dropped.
+#
+# This is a detection decision, so it lives with the detection functions rather
+# than inside the function that writes /etc/modprobe.d/cs35l41.conf: a fixture
+# can then exercise the bus-attachment question that was got wrong once.
+# Output: snd_hda_scodec_cs35l41_i2c or snd_hda_scodec_cs35l41_spi
+audio_cs35l41_amp_module() {
+    local spi
+    spi=$(compgen -G "${STRIX_HALO_FIXTURE_ROOT:-}/sys/bus/spi/devices/*CSC3551*" 2>/dev/null) || spi=""
+    if [[ -n "$spi" ]]; then
+        printf 'snd_hda_scodec_cs35l41_spi\n'
+    else
+        printf 'snd_hda_scodec_cs35l41_i2c\n'
+    fi
 }
 
 # Get audio subsystem ID
@@ -77,8 +117,12 @@ audio_get_subsystem_id() {
     # audio function comes first and reports the generic AMD subsystem 1002:1640,
     # so taking head -1 hides the board's real ASUS subsystem and makes
     # audio_print_status warn about genuine ROG hardware.
-    local subsystems board_id
-    subsystems=$(lspci -vnn -d ::0403 2>/dev/null | grep -i "subsystem" | grep -oP '[\da-f]{4}:[\da-f]{4}') || subsystems=""
+    # Capture, then filter with here-strings: a three-stage pipe whose tail is a
+    # short-circuiting grep turns a successful match into exit 141 under pipefail.
+    local subsystems board_id audio_pci sub_lines
+    audio_pci=$(_probe_lspci_vnn_audio) || audio_pci=""
+    sub_lines=$(grep -i "subsystem" <<< "$audio_pci") || sub_lines=""
+    subsystems=$(grep -oE '[0-9a-fA-F]{4}:[0-9a-fA-F]{4}' <<< "$sub_lines") || subsystems=""
 
     if [[ -z "$subsystems" ]]; then
         echo "unknown"
@@ -99,7 +143,7 @@ audio_get_subsystem_id() {
 audio_module_loaded() {
     # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
     local modules
-    modules=$(lsmod 2>/dev/null) || return 1
+    modules=$(_probe_lsmod) || return 1
     grep -q "^snd_hda_intel" <<< "$modules"
 }
 
@@ -107,7 +151,7 @@ audio_module_loaded() {
 # Returns: 0 if SOF active, 1 if not
 audio_sof_active() {
     local modules
-    modules=$(lsmod 2>/dev/null) || modules=""
+    modules=$(_probe_lsmod) || modules=""
     if grep -q "^snd_sof" <<< "$modules"; then
         return 0
     fi
@@ -123,8 +167,8 @@ audio_sof_active() {
 # Get list of audio cards
 # Output: Audio card list
 audio_list_cards() {
-    if [[ -f /proc/asound/cards ]]; then
-        cat /proc/asound/cards
+    if [[ -f "${STRIX_HALO_FIXTURE_ROOT:-}/proc/asound/cards" ]]; then
+        cat "${STRIX_HALO_FIXTURE_ROOT:-}/proc/asound/cards"
     else
         echo "No audio cards found"
     fi
@@ -157,18 +201,39 @@ audio_ucm_installed() {
 
 # --- Configuration State Detection ---
 
-# Check if CS35L41 configuration is applied
+# PROVENANCE: did this tool write /etc/modprobe.d/cs35l41.conf?
+# Only files written by this tool count: match either the softdep line we emit
+# or our marker comment, so a hand-written cs35l41.conf using options/blacklist
+# is never mistaken for ours.  Deliberately reads the LITERAL path, not the
+# fixture-rooted one - this answer gates deleting the real file, and deciding
+# that from someone else's capture would remove a config we never wrote.
+# Returns: 0 if ours, 1 if not
+audio_cs35l41_config_is_ours() {
+    [[ -f /etc/modprobe.d/cs35l41.conf ]] || return 1
+    grep -q "softdep snd_hda_intel\|# Managed by strix-halo-setup" \
+        /etc/modprobe.d/cs35l41.conf 2>/dev/null
+}
+
+# EFFECT: is the softdep something this kernel will actually act on?
+# Never claims success from our own file - verify_softdep proves the named
+# module exists and that modprobe's merged configuration carries the line.
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL
+audio_cs35l41_config_status() {
+    # The literal path: verify_softdep prefixes STRIX_HALO_FIXTURE_ROOT itself
+    # when it reads the file, and reports the real path in VERIFY_DETAIL.
+    verify_softdep /etc/modprobe.d/cs35l41.conf \
+        snd_hda_intel "$(audio_cs35l41_amp_module)" post
+}
+
+# COMPAT wrapper: true iff the configuration is live or pending.
+# Used by apply short-circuits and "needs applying" tests.  Cleanup guards must
+# use audio_cs35l41_config_is_ours instead, or a REJECTED file this tool wrote
+# would be misread as user-provided and left on disk forever.
 # Returns: 0 if applied, 1 if not
 audio_cs35l41_config_applied() {
-    # Only files written by this tool count: match either the softdep line we
-    # emit or our marker comment, so a hand-written cs35l41.conf using
-    # options/blacklist is never mistaken for ours.
-    if [[ -f /etc/modprobe.d/cs35l41.conf ]]; then
-        if grep -q "softdep snd_hda_intel\|# Managed by strix-halo-setup" /etc/modprobe.d/cs35l41.conf 2>/dev/null; then
-            return 0
-        fi
-    fi
-    return 1
+    local rc=0
+    audio_cs35l41_config_status || rc=$?
+    [[ $rc -eq $VERIFY_LIVE || $rc -eq $VERIFY_PENDING ]]
 }
 
 # Check if ALSA state service is enabled
@@ -177,6 +242,12 @@ audio_alsa_state_enabled() {
     systemctl is-enabled alsa-restore.service >/dev/null 2>&1 || \
     systemctl is-enabled alsa-state.service >/dev/null 2>&1
 }
+
+# EFFECT: is state restore actually running?  Only alsa-restore.service is
+# checked: alsa-state.service is "static" but inactive on a normal desktop, so
+# requiring it active would report a false failure.
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL
+audio_alsa_state_status() { verify_unit_state alsa-restore.service true; }
 
 # Get comprehensive audio state
 # Output: JSON-like state information
@@ -316,20 +387,30 @@ audio_apply_cs35l41_config() {
         return 0  # Already configured
     fi
     
-    # Apply configuration. The side-codec module is named for the bus the amps
-    # sit on (snd-hda-scodec-cs35l41-{i2c,spi}); there has never been a module
-    # called "cs35l41_hda", so a softdep naming it is silently dropped.
-    local amp_mod="snd_hda_scodec_cs35l41_i2c"
-    if compgen -G '/sys/bus/spi/devices/*CSC3551*' >/dev/null 2>&1; then
-        amp_mod="snd_hda_scodec_cs35l41_spi"
-    fi
-    cat > /etc/modprobe.d/cs35l41.conf <<EOF
+    # Apply configuration.  The bus-attachment decision lives in
+    # audio_cs35l41_amp_module so it can be exercised without writing anything.
+    local amp_mod desired current=""
+    amp_mod=$(audio_cs35l41_amp_module)
+    desired=$(cat <<EOF
 # Managed by strix-halo-setup - Cirrus Logic CS35L41 smart amplifiers
 # Enumerated from ACPI HID CSC3551 by serial_multi_instantiate; the side-codec
 # driver autoloads off the i2c/spi modalias. This only pins load order.
 softdep snd_hda_intel post: ${amp_mod}
 EOF
-    
+)
+
+    # Don't churn the file's mtime when the bytes are already right: a rewritten
+    # mtime makes the file look newer than this boot, which is exactly the
+    # signal verify_* uses to tell "rejected" from "waiting for a reboot".
+    if [[ -f /etc/modprobe.d/cs35l41.conf ]]; then
+        current=$(cat /etc/modprobe.d/cs35l41.conf 2>/dev/null) || current=""
+    fi
+    if [[ "$current" == "$desired" ]]; then
+        return 0
+    fi
+
+    printf '%s\n' "$desired" > /etc/modprobe.d/cs35l41.conf
+
     return 0
 }
 
@@ -375,7 +456,10 @@ audio_apply_configuration() {
         # Only remove a cs35l41.conf this tool wrote - the same path is the
         # conventional home for hand-written CS35L41 workarounds.
         if [[ -f /etc/modprobe.d/cs35l41.conf ]]; then
-            if audio_cs35l41_config_applied; then
+            # PROVENANCE, not effect: a cs35l41.conf of ours that this kernel
+            # rejects still has to be cleaned up.  Asking _applied here would
+            # call it "user-provided" and leave our own broken file behind.
+            if audio_cs35l41_config_is_ours; then
                 mv -f /etc/modprobe.d/cs35l41.conf \
                       /etc/modprobe.d/cs35l41.conf.bak 2>/dev/null || \
                     rm -f /etc/modprobe.d/cs35l41.conf
@@ -425,14 +509,16 @@ audio_verify_working() {
     fi
     
     # Check for audio cards
-    if [[ ! -f /proc/asound/cards ]] || ! grep -q "[0-9]" /proc/asound/cards; then
+    if [[ ! -f "${STRIX_HALO_FIXTURE_ROOT:-}/proc/asound/cards" ]] || \
+       ! grep -q "[0-9]" "${STRIX_HALO_FIXTURE_ROOT:-}/proc/asound/cards"; then
         echo "WARNING: No audio cards detected"
         status=1
     fi
     
     # Check for kernel errors
     local audio_log
-    audio_log=$(dmesg 2>/dev/null | tail -200) || audio_log=""
+    audio_log=$(_probe_kernel_log) || audio_log=""
+    audio_log=$(tail -200 <<< "$audio_log") || audio_log=""
     if grep -qi "snd.*error\|audio.*fail\|cs35l41.*error" <<< "$audio_log"; then
         echo "WARNING: Recent audio errors in kernel log"
         status=1
@@ -447,6 +533,20 @@ audio_verify_working() {
 
 # --- Status Functions ---
 
+# Read one `"key": "value"` field out of a audio_get_state() blob.
+#
+# `echo "$state" | grep KEY | cut -d'"' -f4` is the producer-into-pipeline shape
+# that misreported present hardware as absent in 130a6a9.  The installer sources
+# every library into one shell under `set -euo pipefail`, so a key the blob does
+# not carry makes grep — and therefore the whole pipeline — non-zero, and the
+# caller dies half-way through printing its own status.  Capture first, match
+# with a here-string, and let a missing key yield an empty value instead.
+_audio_state_field() {
+    local blob="$1" key="$2" line
+    line=$(grep -m1 "\"${key}\":" <<< "$blob") || return 0
+    cut -d'"' -f4 <<< "$line"
+}
+
 # Print comprehensive audio status (for user display)
 # Output: Formatted status information
 audio_print_status() {
@@ -459,11 +559,11 @@ audio_print_status() {
     local sof_firmware
     local cs35l41_config
     
-    controller_detected=$(echo "$state" | grep "controller_detected" | cut -d'"' -f4)
-    cs35l41_detected=$(echo "$state" | grep "cs35l41_detected" | cut -d'"' -f4)
-    subsystem_id=$(echo "$state" | grep "subsystem_id" | cut -d'"' -f4)
-    sof_firmware=$(echo "$state" | grep "sof_firmware_installed" | cut -d'"' -f4)
-    cs35l41_config=$(echo "$state" | grep "cs35l41_config_applied" | cut -d'"' -f4)
+    controller_detected=$(_audio_state_field "$state" "controller_detected")
+    cs35l41_detected=$(_audio_state_field "$state" "cs35l41_detected")
+    subsystem_id=$(_audio_state_field "$state" "subsystem_id")
+    sof_firmware=$(_audio_state_field "$state" "sof_firmware_installed")
+    cs35l41_config=$(_audio_state_field "$state" "cs35l41_config_applied")
     
     echo "Audio Status:"
     echo "  Controller:          $controller_detected"
@@ -514,6 +614,7 @@ Detection Functions (read-only):
   audio_detect_controller       - Check if audio controller present
   audio_detect_cs35l41          - Check if CS35L41 amplifiers detected
   audio_get_subsystem_id        - Get audio subsystem ID
+  audio_cs35l41_amp_module      - Side-codec module for the amps' bus (i2c/spi)
   audio_module_loaded           - Check if snd_hda_intel loaded
   audio_sof_active              - Check if SOF is active
   audio_list_cards              - List audio cards
@@ -524,8 +625,11 @@ Firmware Functions:
   audio_install_sof_firmware <distro> - Install SOF firmware
 
 State Check Functions:
-  audio_cs35l41_config_applied  - Check if CS35L41 config applied
+  audio_cs35l41_config_is_ours  - Provenance: did this tool write cs35l41.conf?
+  audio_cs35l41_config_status   - Effect: tri-state VERIFY_* code + VERIFY_DETAIL
+  audio_cs35l41_config_applied  - Compat wrapper: true iff LIVE or REBOOT
   audio_alsa_state_enabled      - Check if ALSA state service enabled
+  audio_alsa_state_status       - Effect: alsa-restore.service enabled + active
   audio_get_state               - Get comprehensive state (JSON)
 
 Configuration Functions (idempotent):
@@ -572,3 +676,12 @@ Design Principles:
   - Clear status reporting
 HELP
 }
+
+# --- Verification Registry ---------------------------------------------------
+# Registered at source time so --verify and --report iterate the same array.
+# The CAP_CS35L41 gate keeps devices without the amplifiers from reporting
+# REJECT for hardware they do not have.
+if declare -F verify_register >/dev/null 2>&1; then
+    verify_register audio "CS35L41 softdep"    audio_cs35l41_config_status CAP_CS35L41
+    verify_register audio "ALSA state restore" audio_alsa_state_status
+fi

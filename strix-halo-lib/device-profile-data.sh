@@ -4,14 +4,59 @@ set -euo pipefail
 
 # ==============================================================================
 # Strix Halo Device Profile Data Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # Single source of truth for the known Strix Halo device matrix used by the
 # installer, device detection, and generated documentation.
 # ==============================================================================
 
+# Pipe-separated columns, in order:
+#
+#    1 id                  8 support_tier      12 cap_detachable_kb
+#    2 vendor_tokens       9 apu               13 cap_internal_oled
+#    3 vendor             10 cap_z13ctl        14 aliases
+#    4 device_model       11 cap_command_center
+#    5 doc_name
+#    6 device_class
+#    7 doc_class
+#
+# HOW MUCH THESE TWO COLUMNS ARE WORTH.  Only the ASUS GZ302 row has ever been
+# checked against real hardware; the other nine are DMI string matches whose
+# capability columns come from vendor spec sheets, and all nine claim false for
+# both booleans.  So:
+#
+#   cap_detachable_kb  is the FALLBACK, not the answer.
+#                      device_detect_detachable_kb() in device-manager.sh
+#                      measures the machine and OUTRANKS this column wherever it
+#                      can reach a verdict — it promotes false to true on a
+#                      detachable enclosure with a folio clipped on, and demotes
+#                      true to false on an enclosure that structurally cannot
+#                      have one.  This column is consulted only when the
+#                      measurement is indeterminate, which is what an unclipped
+#                      folio looks like.  CAP_DETACHABLE_KB_SOURCE records which
+#                      of the two answered.
+#
+#   cap_internal_oled  is the ONLY answer.  Nothing measures it: panel technology
+#                      has no field in base EDID and no sysfs attribute, so a
+#                      probe could only guess.  See the note beside
+#                      device_detect_detachable_kb() for what was ruled out.
+#
+#                      WHICH IS WHY IT WAS WRONG FOR THE FLAGSHIP UNTIL 6.9.0.
+#                      This column claimed true for asus-gz302 off the spec
+#                      sheet.  The eDP EDID on the machine itself says otherwise
+#                      — 256 bytes, manufacturer TMA (Tianma), product 0x0803,
+#                      29x18 cm, descriptor 0xFC "TL134ADXP03", a Tianma LCD
+#                      part.  The GZ302EA ships ASUS's IPS "Nebula Display".
+#                      The column now says false.  Nothing gates behaviour on
+#                      it: display-fix.sh picks the PSR-SU / Replay workaround
+#                      from the kernel version in
+#                      display_get_target_dcdebugmask_value(), never from this
+#                      flag, so the correction changes reported metadata and the
+#                      applied fix not at all.  An unmeasured column is exactly
+#                      the kind that stays wrong quietly; treat the other nine
+#                      rows accordingly.
 STRIX_HALO_KNOWN_DEVICE_PROFILES=$(cat <<'EOF'
-asus-gz302|asus|ASUS|ROG Flow Z13 (GZ302)|ASUS ROG Flow Z13 (GZ302)|tablet|Tablet / Gaming 2-in-1|full|Ryzen AI Max+ 395 / Max 390|true|true|true|true|gz302,rog flow z13
+asus-gz302|asus|ASUS|ROG Flow Z13 (GZ302)|ASUS ROG Flow Z13 (GZ302)|tablet|Tablet / Gaming 2-in-1|full|Ryzen AI Max+ 395 / Max 390|true|true|true|false|gz302,rog flow z13
 hp-zbook-ultra-g1a|hp,hewlett|HP|HP ZBook Ultra G1a|HP ZBook Ultra G1a|workstation-laptop|Workstation laptop|partial|Ryzen AI Max+ PRO 395|false|false|false|false|zbook ultra g1a
 hp-z2-g1a|hp,hewlett|HP|HP Mini Workstation (Z2 G1a)|HP Mini Workstation (Z2 G1a)|mini-pc|Mini workstation|partial|Ryzen AI Max+ 395|false|false|false|false|z2 g1a
 framework-desktop|framework|Framework|Framework Desktop|Framework Desktop|desktop|Desktop|partial|Ryzen AI Max 385 / Max+ 395|false|false|false|false|framework desktop

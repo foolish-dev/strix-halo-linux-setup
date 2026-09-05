@@ -1,0 +1,10 @@
+DEVPATH=/devices/platform/PNP0C0C:00/input/input1/event1
+DEVNAME=/dev/input/event1
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=platform
+ID_PATH=platform-PNP0C0C:00
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:

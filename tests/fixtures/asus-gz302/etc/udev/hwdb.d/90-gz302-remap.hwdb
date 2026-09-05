@@ -1,0 +1,4 @@
+# GZ302 Keyboard Remapping (Copilot -> Insert)
+# Detected Product ID: 1A30
+evdev:input:b0003v0B05p1A30*
+  KEYBOARD_KEY_70072=insert

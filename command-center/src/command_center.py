@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Strix Halo Command Center — Strix Halo Edition (v6.9.0)
+Strix Halo Command Center — Strix Halo Edition (v6.10.0)
 Unified Dashboard and System Tray Controller.
 Inspired by G-Helper and Strix-Halo-Control.
 """
@@ -34,13 +34,22 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from modules.config import ConfigManager
 from modules.notifications import NotificationManager
 from modules.rgb_controller import RGBController
-from modules.power_controller import PowerController
+from modules.power_controller import PowerController, FixVerificationController
 
 TRAY_ICON_SIZE = 24
-VERSION = "6.9.0"
+VERSION = "6.10.0"
 DASHBOARD_WINDOW_TITLE = "Strix Halo Dashboard"
 DASHBOARD_WINDOW_ROLE = "strix-halo-dashboard"
 KWIN_DASHBOARD_SCRIPT_NAME = "strix_halo_dashboard_anchor"
+# Tone -> colour for the applied-fix verification headline. "warn" is the
+# pending-reboot state, which the dashboard previously could not express.
+VERIFY_TONE_COLORS = {
+    "bad": "#ff4655",
+    "warn": "#e9b44c",
+    "ok": "#4ecb71",
+    "idle": "#666",
+}
+VERIFY_MAX_ROWS = 3
 RGB_COLOR_PRESETS = [
     ("Ice", "7FDBFF"),
     ("Mint", "2ECC71"),
@@ -67,12 +76,15 @@ class DashboardWindow(QWidget):
         ("Maximum\n90W",    "maximum",   "#e33"),
     ]
 
-    def __init__(self, power_ctrl, rgb_controller, config, notifier):
+    def __init__(self, power_ctrl, rgb_controller, config, notifier, verify=None):
         super().__init__()
         self.power = power_ctrl
         self.rgb = rgb_controller
         self.config = config
         self.notifier = notifier
+        # Optional: the dashboard works unchanged on a machine where the
+        # installer cannot be found, so every use of it is guarded.
+        self.verify = verify
         self._profile_btns = {}
         self._rgb_buttons = []
         self._fan_curve_placeholder = "48:2,53:22,57:30,60:43,63:56,65:68,70:89,76:102"
@@ -89,6 +101,14 @@ class DashboardWindow(QWidget):
         self.setup_ui()
         self.apply_styles()
         self.apply_backend_state()
+
+        # The worker thread emits this signal; Qt queues it onto the GUI thread
+        # because that is where this object lives.  QTimer.singleShot() from the
+        # worker would silently do nothing — a thread with no event dispatcher
+        # has no timers.
+        if self.verify is not None:
+            self.verify.updated.connect(self._on_verify_updated)
+        self._render_verify(self.verify.snapshot() if self.verify else None)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -108,6 +128,10 @@ class DashboardWindow(QWidget):
         root.addWidget(self._build_rgb_section())
         root.addWidget(self._build_divider())
         root.addWidget(self._build_fan_section())
+        self._verify_divider = self._build_divider()
+        root.addWidget(self._verify_divider)
+        self._verify_section = self._build_verify_section()
+        root.addWidget(self._verify_section)
         root.addWidget(self._build_footer())
 
     def _build_header(self):
@@ -343,6 +367,120 @@ class DashboardWindow(QWidget):
         vbox.addLayout(hbox)
         return section
 
+    def _build_verify_section(self):
+        """What the installer applied, as the installer itself sees it.
+
+        Three states matter: live, rejected (the kernel is ignoring it) and
+        pending — correctly configured but only in effect after a reboot.
+        """
+        section = QFrame()
+        section.setObjectName("section")
+        vbox = QVBoxLayout(section)
+        vbox.setContentsMargins(14, 10, 14, 10)
+        vbox.setSpacing(5)
+
+        head = QHBoxLayout()
+        head.setSpacing(6)
+        head.addWidget(self._section_title("APPLIED FIXES"))
+        head.addStretch()
+        recheck = QPushButton("Recheck")
+        recheck.setObjectName("rgb_minor_btn")
+        recheck.setFixedHeight(22)
+        recheck.clicked.connect(self._recheck_fixes)
+        self._verify_recheck_btn = recheck
+        head.addWidget(recheck)
+        vbox.addLayout(head)
+
+        headline = QLabel("")
+        headline.setObjectName("verify_headline")
+        headline.setWordWrap(True)
+        headline.setMaximumWidth(430)
+        self._verify_headline = headline
+        vbox.addWidget(headline)
+
+        detail = QLabel("")
+        detail.setObjectName("verify_detail")
+        detail.setWordWrap(True)
+        detail.setMaximumWidth(430)
+        self._verify_detail = detail
+        vbox.addWidget(detail)
+
+        return section
+
+    def _recheck_fixes(self):
+        if self.verify is None:
+            return
+        if self.verify.refresh_async(force=True):
+            self._verify_recheck_btn.setEnabled(False)
+            self._verify_recheck_btn.setText("Checking...")
+
+    def _on_verify_updated(self, snapshot):
+        self._verify_recheck_btn.setEnabled(True)
+        self._verify_recheck_btn.setText("Recheck")
+        # A failed run carries None; keep showing the last good answer rather
+        # than blanking a section the user may be reading.
+        self._render_verify(snapshot or (self.verify.snapshot() if self.verify else None))
+
+    def _render_verify(self, snapshot):
+        """Paint the section, or hide it entirely when there is nothing to say."""
+        try:
+            if not snapshot:
+                self._verify_section.setVisible(False)
+                self._verify_divider.setVisible(False)
+                return
+
+            text, tone = FixVerificationController.headline(snapshot)
+            self._verify_headline.setText(text)
+            self._verify_headline.setStyleSheet(
+                "font-size: 11px; font-weight: bold; color: %s;"
+                % VERIFY_TONE_COLORS.get(tone, VERIFY_TONE_COLORS["idle"])
+            )
+
+            rows = FixVerificationController.attention_rows(snapshot)
+            if rows:
+                lines = []
+                for row in rows[:VERIFY_MAX_ROWS]:
+                    tag = "REBOOT" if row["status"] == "pending" else "IGNORED"
+                    detail = row["detail"]
+                    if len(detail) > 96:
+                        detail = detail[:95] + "\u2026"
+                    lines.append("%s  %s - %s" % (tag, row["label"], detail))
+                if len(rows) > VERIFY_MAX_ROWS:
+                    lines.append("+%d more" % (len(rows) - VERIFY_MAX_ROWS))
+                self._verify_detail.setText("\n".join(lines))
+            else:
+                counts = snapshot["counts"]
+                self._verify_detail.setText(
+                    "%d checked on kernel %s - nothing needs your attention."
+                    % (sum(counts.values()), snapshot["kernel"])
+                )
+
+            self._verify_section.setVisible(True)
+            self._verify_divider.setVisible(True)
+            # Growing a frameless popup that is anchored to the bottom-right
+            # corner pushes it off the screen; re-clamp it rather than let a
+            # late result cut the footer off.
+            if self.isVisible():
+                self.adjustSize()
+                self._keep_on_screen()
+        except Exception:
+            # Verification is a read-out, never a reason for the dashboard to
+            # stop working.
+            try:
+                self._verify_section.setVisible(False)
+                self._verify_divider.setVisible(False)
+            except Exception:
+                pass
+
+    def _keep_on_screen(self):
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        if screen is None:
+            return
+        geom = screen.availableGeometry()
+        x = min(self.x(), geom.right() - self.width() - 8)
+        y = min(self.y(), geom.bottom() - self.height() - 8)
+        self.move(max(geom.left(), x), max(geom.top(), y))
+
     def _build_footer(self):
         footer = QFrame()
         footer.setObjectName("footer")
@@ -543,6 +681,10 @@ class DashboardWindow(QWidget):
                 background-color: #252525;
                 color: #fff;
             }
+            #verify_detail {
+                font-size: 10px;
+                color: #7a7a7a;
+            }
         """)
         self.adjustSize()
 
@@ -640,8 +782,14 @@ class CommandCenterApp(QSystemTrayIcon):
         self.notifier = NotificationManager(self)
         self.rgb = RGBController(self.notifier)
         self.power = PowerController(self.notifier)
-        
-        self.dashboard = DashboardWindow(self.power, self.rgb, self.config, self.notifier)
+        # Read-only, unprivileged, and entirely optional: on a machine where the
+        # installer cannot be found this stays quiet and nothing else changes.
+        self.verify = FixVerificationController()
+        self.verify.updated.connect(self._on_verify_updated)
+
+        self.dashboard = DashboardWindow(
+            self.power, self.rgb, self.config, self.notifier, self.verify
+        )
         self._kwin_script_loaded = False
         self._setup_kwin_dashboard_positioner()
         
@@ -662,6 +810,11 @@ class CommandCenterApp(QSystemTrayIcon):
         self.timer.start(3000)
         
         self.notifier.notify("Dashboard Ready", self.config.get_device_label(), "success", 2000)
+
+        # One background run at startup so the tray menu and tooltip have an
+        # answer before the dashboard is ever opened.  It cannot block the GUI
+        # thread: refresh_async only starts a daemon thread.
+        self.verify.refresh_async()
 
     def _build_color_icon(self, hex_color):
         pixmap = QPixmap(14, 14)
@@ -699,6 +852,15 @@ class CommandCenterApp(QSystemTrayIcon):
         self.menu.addAction("🖥️ Open Dashboard").triggered.connect(
             lambda _=False: QTimer.singleShot(0, self._show_dashboard)
         )
+
+        verify_line = FixVerificationController.summary_line(self.verify.snapshot())
+        if verify_line:
+            fixes_action = QAction(f"🩺 Applied fixes: {verify_line}", self)
+            fixes_action.triggered.connect(
+                lambda _=False: QTimer.singleShot(0, self._show_dashboard)
+            )
+            self.menu.addAction(fixes_action)
+
         self.menu.addSeparator()
 
         # --- Power Profiles ---
@@ -830,8 +992,21 @@ class CommandCenterApp(QSystemTrayIcon):
         start_result = self._run_kwin_script_command("org.kde.kwin.Scripting.start")
         self._kwin_script_loaded = start_result is not None and start_result.returncode == 0
 
+    def _on_verify_updated(self, _snapshot):
+        """Runs on the GUI thread: `updated` is emitted from a worker thread and
+        Qt queues it here, which is the only safe way back from that thread."""
+        try:
+            line = FixVerificationController.summary_line(self.verify.snapshot())
+            name = self.config.get_app_name()
+            self.setToolTip(f"{name}\n{line}" if line else name)
+        except Exception:
+            pass
+
     def _show_dashboard(self):
         """Show the dashboard and let KWin/Qt place it."""
+        # Throttled inside the controller, and never on the 3 s poll: opening the
+        # panel is the moment this is worth re-reading.
+        self.verify.refresh_async()
         self.dashboard.update_ui_states()
         self.dashboard.show()
         QTimer.singleShot(0, self._finalize_dashboard_show)

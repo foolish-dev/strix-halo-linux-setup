@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # Strix Halo Device Manager Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # Detects the running hardware and produces a normalized device profile for
 # the Strix Halo (AMD Ryzen AI MAX / MAX+) platform.  All installer sections
@@ -21,8 +21,22 @@ set -euo pipefail
 # Capability flags (set by device_detect(), each "true" or "false"):
 #   CAP_STRIX_HALO      — confirmed Strix Halo CPU/GPU signatures present
 #   CAP_ASUS_WMI         — asus-wmi / asus-nb-wmi kernel interface present
-#   CAP_DETACHABLE_KB    — device has a detachable keyboard (tablet mode)
-#   CAP_INTERNAL_OLED    — device ships with an internal OLED panel
+#   CAP_DETACHABLE_KB    — device has a detachable keyboard (tablet mode).
+#                          MEASURED by device_detect_detachable_kb(), which
+#                          outranks the static profile record wherever it can
+#                          reach a verdict; the record answers only when the
+#                          measurement is indeterminate.
+#   CAP_DETACHABLE_KB_MEASURED
+#                        — what that probe actually saw: true | false |
+#                          indeterminate.  Recorded separately so the
+#                          measurement survives being resolved into the
+#                          capability above.
+#   CAP_DETACHABLE_KB_SOURCE
+#                        — which of the two decided CAP_DETACHABLE_KB:
+#                          "measured" or "profile-record".
+#   CAP_INTERNAL_OLED    — device ships with an internal OLED panel.  STATIC
+#                          ONLY — see the note below device_detect_detachable_kb()
+#                          for why no probe was adopted.
 #   CAP_MT7925           — MediaTek MT7925 WiFi detected
 #   CAP_CS35L41          — Cirrus Logic CS35L41 smart-amp detected
 #   CAP_DASHBOARD        — generic Strix Halo dashboard / tray app is applicable
@@ -39,6 +53,11 @@ set -euo pipefail
 
 DEVICE_MANAGER_LIB_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
+if ! declare -F _probe_lspci_nn >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${DEVICE_MANAGER_LIB_DIR}/probe-source.sh"
+fi
+
 if ! declare -F device_profile_known_record_by_dmi >/dev/null 2>&1; then
     # shellcheck source=/dev/null
     source "${DEVICE_MANAGER_LIB_DIR}/device-profile-data.sh"
@@ -53,6 +72,8 @@ DEVICE_SUPPORT_TIER="experimental"
 CAP_STRIX_HALO="false"
 CAP_ASUS_WMI="false"
 CAP_DETACHABLE_KB="false"
+CAP_DETACHABLE_KB_MEASURED="indeterminate"
+CAP_DETACHABLE_KB_SOURCE="profile-record"
 CAP_INTERNAL_OLED="false"
 CAP_MT7925="false"
 CAP_CS35L41="false"
@@ -65,7 +86,7 @@ CAP_ROCM="false"
 
 _dmi_read() {
     local field="$1"
-    local path="/sys/class/dmi/id/${field}"
+    local path="${STRIX_HALO_FIXTURE_ROOT:-}/sys/class/dmi/id/${field}"
     if [[ -r "$path" ]]; then
         cat "$path" 2>/dev/null || echo ""
     else
@@ -73,18 +94,7 @@ _dmi_read() {
     fi
 }
 
-_cpu_model_read() {
-    local cpu_model=""
-
-    cpu_model=$(lscpu 2>/dev/null | awk -F: '/Model name:/ {sub(/^[[:space:]]+/, "", $2); print $2; exit}')
-    if [[ -n "$cpu_model" ]]; then
-        printf '%s\n' "$cpu_model"
-        return 0
-    fi
-
-    cpu_model=$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^[[:space:]]*//')
-    printf '%s\n' "$cpu_model"
-}
+_cpu_model_read() { _probe_cpu_model; }
 
 # The libraries run with `set -o pipefail`, so `producer | grep -q` is unsafe as a
 # probe: `grep -q` exits on its first match, the producer dies of SIGPIPE, and the
@@ -92,19 +102,19 @@ _cpu_model_read() {
 # match it with a here-string so no pipe exists to break.
 _lspci_has() {
     local listing
-    listing=$(lspci -nn 2>/dev/null) || return 1
+    listing=$(_probe_lspci_nn) || return 1
     grep -Eiq "$1" <<< "$listing"
 }
 
 _lsusb_has() {
     local listing
-    listing=$(lsusb 2>/dev/null) || return 1
+    listing=$(_probe_lsusb) || return 1
     grep -Eiq "$1" <<< "$listing"
 }
 
 _kernel_module_loaded() {
     local modules
-    modules=$(lsmod 2>/dev/null) || return 1
+    modules=$(_probe_lsmod) || return 1
     grep -q "^${1}[[:space:]]" <<< "$modules"
 }
 
@@ -161,29 +171,33 @@ device_detect_cs35l41() {
     # its codec (e.g. ALC294) rather than the amplifiers, so neither `lspci` nor
     # `aplay -l` nor the ALSA card id ever mentions cs35l41.
     local bus_match
-    bus_match=$(find /sys/bus/i2c/devices /sys/bus/spi/devices -maxdepth 1 \
-        -iname "*cs35l41*" -o -iname "*CSC3551*" 2>/dev/null) || bus_match=""
+    local _fx="${STRIX_HALO_FIXTURE_ROOT:-}"
+    # GNU find exits 1 when ANY path argument is missing, even after printing
+    # matches, so `|| bus_match=""` discarded a real CS35L41 hit on machines with
+    # no /sys/bus/spi. Keep the output; the emptiness test below is the decision.
+    bus_match=$(find "${_fx}/sys/bus/i2c/devices" "${_fx}/sys/bus/spi/devices" -maxdepth 1 \
+        \( -iname "*cs35l41*" -o -iname "*CSC3551*" \) 2>/dev/null) || true
     if [[ -n "$bus_match" ]]; then
         CAP_CS35L41="true"
         return 0
     fi
 
     local modules
-    modules=$(lsmod 2>/dev/null) || modules=""
+    modules=$(_probe_lsmod) || modules=""
     if grep -q "cs35l41" <<< "$modules"; then
         CAP_CS35L41="true"
         return 0
     fi
 
     local playback_devices
-    playback_devices=$(aplay -l 2>/dev/null) || playback_devices=""
+    playback_devices=$(_probe_aplay_l) || playback_devices=""
     if grep -qi "cs35l41" <<< "$playback_devices"; then
         CAP_CS35L41="true"
         return 0
     fi
 
     local card_ids
-    card_ids=$(find /sys/class/sound/ -name "card*" -exec cat {}/id \; 2>/dev/null) || card_ids=""
+    card_ids=$(find "${STRIX_HALO_FIXTURE_ROOT:-}/sys/class/sound/" -name "card*" -exec cat {}/id \; 2>/dev/null) || card_ids=""
     if grep -qi "cs35l41" <<< "$card_ids"; then
         CAP_CS35L41="true"
         return 0
@@ -216,12 +230,198 @@ device_detect_asus_wmi() {
         CAP_ASUS_WMI="true"
         return 0
     fi
-    if [[ -d /sys/class/firmware-attributes/asus-armoury ]]; then
+    if [[ -d "${STRIX_HALO_FIXTURE_ROOT:-}/sys/class/firmware-attributes/asus-armoury" ]]; then
         CAP_ASUS_WMI="true"
         return 0
     fi
     CAP_ASUS_WMI="false"
 }
+
+# SMBIOS System Enclosure types (DSP0134 7.4.1), split into the only two groups
+# whose answer to "can the keyboard come off?" is not an interpretation.
+#
+#   FIXED_KB   the enclosure either has no built-in keyboard at all (every
+#              desktop, mini-PC, server and expansion chassis) or has one that
+#              is structurally part of it (clamshell laptops 8/9/10/14, and
+#              convertibles 31 — those fold, they do not detach).  A device in
+#              one of these cannot have a detachable folio, whatever a spec
+#              sheet says, and that is what stops a USB keyboard plugged into a
+#              Framework Desktop from reading as one.
+#
+#   DETACHABLE 32 is literally "Detachable" and 30 is "Tablet".
+#
+# Named SMBIOS_* rather than DEVICE_*: fixture-format.sh's expected snapshot
+# sweeps up every DEVICE_*/CAP_* variable in scope, and these two are library
+# constants, not a detection result about the machine.
+#
+# Deliberately absent from both: 11 (Portable), 12 (Docking Station), 13
+# (Handheld), and everything unlisted.  Vendors genuinely disagree about those,
+# and a rule that misfires here would demote a correct record.  They fall to the
+# indeterminate branch, where the profile record answers.
+#
+# These are the same groupings tests/device-fixture-replay.sh applies to the
+# device matrix rows, for the same reason; the two must not drift.
+SMBIOS_CHASSIS_FIXED_KB=" 3 4 5 6 7 8 9 10 14 15 16 17 23 24 31 34 35 36 "
+SMBIOS_CHASSIS_DETACHABLE=" 30 32 "
+
+# Is a keyboard genuinely attached over something other than the i8042 stub?
+#
+# Firmware registers "AT Translated Set 2 keyboard" on virtually every x86
+# machine whether or not a key exists — that stub is what made the old name-glob
+# keyboard check unable to ever report a detached folio — so it proves nothing,
+# while a keyboard on any hot-pluggable bus does.  udev's ID_INPUT_KEYBOARD
+# classifier is the primary source because it is derived from the evdev
+# capability bits and so never mistakes a touchscreen, a hotkey node or the ASUS
+# N-KEY device for a keyboard.  (Measured on the flagship: of 24 event nodes,
+# exactly two are ID_INPUT_KEYBOARD=1 — the i8042 stub at event2 and the folio
+# at 0b05:1a30 on event5.)
+#
+# Every read goes through the probe seam, so a fixture replay exercises this
+# body against a capture instead of the replaying host.
+#
+# Returns 0 when such a keyboard is attached, 1 when none was found.
+_detachable_kb_attached() {
+    if _probe_udev_available; then
+        local node props
+        for node in "${STRIX_HALO_FIXTURE_ROOT:-}"/sys/class/input/event*; do
+            [[ -e "$node" ]] || continue
+            props=$(_probe_udev_properties "$node") || continue
+            grep -q '^ID_INPUT_KEYBOARD=1$' <<< "$props" || continue
+            grep -q '^ID_BUS=i8042$' <<< "$props" && continue
+            grep -q '^ID_PATH=platform-i8042' <<< "$props" && continue
+            return 0
+        done
+    fi
+
+    # Reached when udev is unavailable, and also when it is available but
+    # classified nothing.  Records are blank-line separated; BUS_I8042 is 0x0011
+    # in the "I: Bus=" field.  This branch has to fall back to the name, exactly
+    # as input_keyboard_detected() does, because reconstructing udev's
+    # capability-bit classifier in shell would be a second, differently-wrong
+    # classifier.
+    local path="${STRIX_HALO_FIXTURE_ROOT:-}/proc/bus/input/devices"
+    [[ -r "$path" ]] || return 1
+
+    # Capture, then walk it with an extra trailing blank line so the final
+    # record is flushed by the same branch as every other one.
+    local devices line bus="" name="" sysfs=""
+    devices=$(cat "$path" 2>/dev/null) || return 1
+    while IFS= read -r line; do
+        case "$line" in
+            "I: Bus="*)   bus="${line#I: Bus=}"; bus="${bus%% *}" ;;
+            "N: Name="*)  name="${line,,}" ;;
+            "S: Sysfs="*) sysfs="${line#S: Sysfs=}" ;;
+            "")
+                if [[ "$bus" != "0011" && "$name" == *keyboard* \
+                      && "$sysfs" != /devices/platform/i8042* ]]; then
+                    return 0
+                fi
+                bus=""; name=""; sysfs=""
+                ;;
+        esac
+    done <<< "${devices}"$'\n'
+    return 1
+}
+
+# Detect a detachable keyboard (folio / kickstand tablet) from the hardware.
+#
+# WHAT THE STATIC RECORD IS FOR.  The measurement is authoritative wherever it
+# can reach a verdict; the profile record answers only where it cannot.  It has
+# to be that way round in both directions:
+#
+#   * The record is a vendor spec sheet.  Nine of the eleven rows have never
+#     been near the hardware they describe, so a measurement that CAN speak must
+#     outrank one — otherwise the probe is decoration.
+#
+#   * The measurement genuinely cannot always speak.  A folio that happens to be
+#     unclipped right now is indistinguishable from a machine that never had
+#     one, and answering "false" there would silently switch off the strict
+#     branch of input_keyboard_detected(), which exists precisely to notice a
+#     detached folio.  So "no keyboard attached to a detachable enclosure" is
+#     recorded as INDETERMINATE, not as false, and the record supplies the
+#     answer.
+#
+# The three outcomes, and every one of them is written to
+# CAP_DETACHABLE_KB_MEASURED so the measurement is inspectable rather than
+# folded away into the capability:
+#
+#   false          the enclosure cannot have a detachable keyboard
+#                  (SMBIOS_CHASSIS_FIXED_KB).  Overrides the record.
+#   true           the enclosure detaches AND a non-i8042 keyboard is attached
+#                  right now.  Overrides the record.
+#   indeterminate  anything else — chassis unreadable, chassis in neither group,
+#                  or a detachable enclosure with nothing currently clipped on.
+#                  The record stands, and CAP_DETACHABLE_KB_SOURCE says so.
+#
+# device_detect() calls this AFTER _apply_device_profile() so that the record is
+# in place to be the fallback.
+#
+# A disagreement is never silently swallowed, even though the probe resolves it.
+# fixture-format.sh's `expected` snapshot records CAP_DETACHABLE_KB alongside
+# both variables below, so on any machine where the measurement overrode the
+# matrix the recorded value stops matching the record's column — and
+# tests/device-fixture-replay.sh's _check_b_recorded_values() raises that as a
+# PROFILE fault needing an explicit annotation.  The runtime picks the better
+# answer; the fixture makes somebody look at the record.
+device_detect_detachable_kb() {
+    local record="$CAP_DETACHABLE_KB"
+    local chassis
+
+    CAP_DETACHABLE_KB_MEASURED="indeterminate"
+    CAP_DETACHABLE_KB_SOURCE="profile-record"
+
+    chassis=$(_dmi_read "chassis_type")
+    chassis="${chassis//[^0-9]/}"
+
+    if [[ -n "$chassis" ]]; then
+        if [[ "$SMBIOS_CHASSIS_FIXED_KB" == *" ${chassis} "* ]]; then
+            CAP_DETACHABLE_KB_MEASURED="false"
+            CAP_DETACHABLE_KB_SOURCE="measured"
+            CAP_DETACHABLE_KB="false"
+            return 0
+        fi
+        if [[ "$SMBIOS_CHASSIS_DETACHABLE" == *" ${chassis} "* ]] \
+            && _detachable_kb_attached; then
+            CAP_DETACHABLE_KB_MEASURED="true"
+            CAP_DETACHABLE_KB_SOURCE="measured"
+            CAP_DETACHABLE_KB="true"
+            return 0
+        fi
+    fi
+
+    CAP_DETACHABLE_KB="$record"
+    return 0
+}
+
+# CAP_INTERNAL_OLED IS NOT MEASURED, AND THIS IS DELIBERATE.
+#
+# The obvious probe is the eDP connector's EDID, and it does not work.  Base
+# EDID 1.4 carries no field that names the panel technology: byte 0x14 says
+# digital-vs-analogue and the bit depth, byte 0x18 says colour encoding and
+# power management, and neither has an emissive/transmissive bit.  The only
+# structure that does — the DisplayID Display Device Data Block — is optional,
+# is absent from every laptop eDP blob checked here, and would need a nested
+# CTA/DisplayID extension parser in shell to reach.  The plausible-looking
+# proxies are all false friends: a wide P3 gamut, HDR static metadata and a
+# near-zero minimum-luminance figure are claimed by HDR-badged IPS panels too,
+# and a DPCD backlight device exists for both technologies.  Panel model
+# strings (EDID descriptor 0xFC) do identify the panel, but decoding one into a
+# technology needs an out-of-band parts database this toolkit has no business
+# shipping — and a wrong measured value is worse than an honest static one.
+#
+# So CAP_INTERNAL_OLED stays on the vendor record in device-profile-data.sh.
+#
+# FLAGSHIP FINDING, ACTED ON.  The record used to claim internal-OLED for
+# asus-gz302.  The EDID this machine reports is 256 bytes, manufacturer TMA
+# (Tianma), product 0x0803, 29x18 cm, descriptor 0xFC "TL134ADXP03" — a Tianma
+# LCD part.  The ROG Flow Z13 GZ302EA ships ASUS's IPS "Nebula Display", not an
+# OLED, so the spec-sheet value was simply wrong and the matrix row now says
+# false.  Nothing gates behaviour on this flag: the PSR-SU / Replay workaround
+# in display-fix.sh is chosen by display_get_target_dcdebugmask_value() on
+# kernel version alone, and every other reader — the capability list below,
+# report-manager's dump, the replay's contradiction check — only reports it.
+# That is precisely why an unmeasured flag could stay wrong for so long, and
+# why it is worth being right about anyway: it is what a bug report shows.
 
 # --- Device Profile Matching ---
 
@@ -325,6 +525,8 @@ device_detect() {
     CAP_STRIX_HALO="false"
     CAP_ASUS_WMI="false"
     CAP_DETACHABLE_KB="false"
+    CAP_DETACHABLE_KB_MEASURED="indeterminate"
+    CAP_DETACHABLE_KB_SOURCE="profile-record"
     CAP_INTERNAL_OLED="false"
     CAP_MT7925="false"
     CAP_CS35L41="false"
@@ -352,6 +554,10 @@ device_detect() {
 
     _apply_device_profile "$sys_vendor" "$product_name" "$product_family" "$board_name"
 
+    # Measured capabilities.  Ordered after _apply_device_profile because the
+    # record they may override — and fall back to — has to be in place first.
+    device_detect_detachable_kb
+
     # If asus-wmi is not loaded on an ASUS device, z13ctl still applies via
     # the HID interface — don't override the profile flag.
     # For non-ASUS devices, z13ctl is not applicable unless explicitly set.
@@ -362,6 +568,7 @@ device_detect() {
 
     export DEVICE_VENDOR DEVICE_MODEL DEVICE_CLASS DEVICE_SUPPORT_TIER
     export CAP_STRIX_HALO CAP_ASUS_WMI CAP_DETACHABLE_KB CAP_INTERNAL_OLED
+    export CAP_DETACHABLE_KB_MEASURED CAP_DETACHABLE_KB_SOURCE
     export CAP_MT7925 CAP_CS35L41 CAP_DASHBOARD CAP_Z13CTL CAP_COMMAND_CENTER CAP_ROCM
 }
 

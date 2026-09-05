@@ -1,0 +1,7 @@
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input27/event14
+DEVNAME=/dev/input/event14
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal

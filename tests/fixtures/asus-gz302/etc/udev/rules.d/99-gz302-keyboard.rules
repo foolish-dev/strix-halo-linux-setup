@@ -1,0 +1,3 @@
+# GZ302 Keyboard RGB Control - Allow unprivileged USB access
+# ASUS ROG Flow Z13 keyboard (USB 0b06.0.00)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="1a30", TAG+="uaccess"

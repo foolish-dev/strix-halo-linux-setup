@@ -1,0 +1,7 @@
+DEVPATH=/devices/platform/pcspkr/input/input21/event7
+DEVNAME=/dev/input/event7
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=platform
+ID_PATH=platform-pcspkr
+ID_INTEGRATION=internal

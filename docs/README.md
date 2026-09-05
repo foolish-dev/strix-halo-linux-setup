@@ -10,6 +10,8 @@ Documentation for the ASUS ROG Flow Z13 (GZ302) Linux Setup project.
 | [AI/ML Packages](technical/ai-ml-packages.md) | ROCm, Ollama, PyTorch setup |
 | [ROCm Support](technical/rocm-support.md) | ROCm 7.2+ configuration |
 | [Testing Guide](testing-guide.md) | How to test changes |
+| [Diagnostic Report](diagnostic-report.md) | `--report`: what it collects, what it removes, how a maintainer uses it |
+| [Contributing a Device Fixture](contributing-a-device-fixture.md) | Capture your machine's hardware state as a permanent regression test |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Obsolescence Analysis](technical/obsolescence-analysis.md) | Component lifecycle status |
 
@@ -40,7 +42,7 @@ Documentation for the ASUS ROG Flow Z13 (GZ302) Linux Setup project.
 
 ```text
 strix-halo-linux-setup/
-├── strix-halo-setup.sh         # Unified installer (v6.9.0)
+├── strix-halo-setup.sh         # Unified installer (v6.10.0)
 ├── strix-halo-lib/             # Shared bash libraries
 ├── modules/               # Optional modules (gaming, AI, hypervisor)
 ├── scripts/               # Standalone tools & utilities
@@ -67,6 +69,11 @@ sudo bash strix-halo-setup.sh
 
 ## Getting Help
 
-1. Check [Kernel Support](technical/kernel-support.md) for compatibility issues
-2. See [Testing Guide](testing-guide.md) for diagnostic commands
-3. Open an issue: [GitHub Issues](https://github.com/foolish-dev/strix-halo-linux-setup/issues)
+1. Generate a diagnostic bundle: `./strix-halo-setup.sh --report` (no sudo needed).
+   It records the detected device profile, verifies every applied fix against live
+   kernel state, and writes a replayable hardware fixture — with serials, MACs,
+   UUIDs, SSIDs, your hostname and your username removed and re-scanned for.
+   See [Diagnostic Report](diagnostic-report.md).
+2. Check [Kernel Support](technical/kernel-support.md) for compatibility issues
+3. See [Testing Guide](testing-guide.md) for diagnostic commands
+4. Open an issue: [GitHub Issues](https://github.com/foolish-dev/strix-halo-linux-setup/issues) — attach the bundle from step 1

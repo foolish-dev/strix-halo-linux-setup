@@ -1,0 +1,15 @@
+c4:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Radeon High Definition Audio Controller [1002:1640] (prog-if 00 [HDA compatible])
+	Subsystem: Advanced Micro Devices, Inc. [AMD/ATI] Radeon High Definition Audio Controller [1002:1640]
+	Flags: bus master, fast devsel, latency 0, IRQ 140, IOMMU group 19
+	Memory at a0448000 (32-bit, non-prefetchable) [size=16K]
+	Capabilities: <access denied>
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_hda_intel
+
+c4:00.6 Audio device [0403]: Advanced Micro Devices, Inc. [AMD] Ryzen HD Audio Controller [1022:15e3] (prog-if 00 [HDA compatible])
+	Subsystem: ASUSTeK Computer Inc. Device [1043:1fb3]
+	Flags: bus master, fast devsel, latency 0, IRQ 141, IOMMU group 23
+	Memory at a0440000 (32-bit, non-prefetchable) [size=32K]
+	Capabilities: <access denied>
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_hda_intel

@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ==============================================================================
 # GZ302 Input Manager Library
-# Version: 6.9.0
+# Version: 6.10.0
 #
 # This library manages ASUS HID devices (keyboard, touchpad) and tablet mode
 # functionality for the GZ302.
@@ -24,6 +24,22 @@ set -euo pipefail
 #   input_verify_working
 # ==============================================================================
 
+INPUT_MANAGER_LIB_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+# The read seam: every probe of live system state goes through probe-source.sh
+# so a fixture replay exercises the real bodies below instead of a mock of them.
+if ! declare -F _probe_lsusb >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${INPUT_MANAGER_LIB_DIR}/probe-source.sh"
+fi
+
+# Tri-state verification vocabulary (VERIFY_* codes, verify_modprobe_option,
+# verify_udev_rule_effect, verify_register).
+if ! declare -F verify_modprobe_option >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "${INPUT_MANAGER_LIB_DIR}/verify-manager.sh"
+fi
+
 # --- Input Hardware Detection ---
 
 # Detect ASUS HID devices
@@ -31,7 +47,7 @@ set -euo pipefail
 # Output: Device information if found
 input_detect_hid_devices() {
     local usb_list device_info
-    usb_list=$(lsusb 2>/dev/null) || usb_list=""
+    usb_list=$(_probe_lsusb) || usb_list=""
     if device_info=$(grep -i "0b05.*asus\|asus.*keyboard" <<< "$usb_list"); then
         echo "$device_info"
         return 0
@@ -48,19 +64,21 @@ input_touchpad_detected() {
     # touchpad lives on USB in the detachable folio. ID_INPUT_TOUCHPAD is derived
     # from the evdev capability bits, so it is bus-agnostic and never matches a
     # touchscreen.
-    if command -v udevadm >/dev/null 2>&1; then
+    if _probe_udev_available; then
         local d props
-        for d in /sys/class/input/event*; do
+        for d in "${STRIX_HALO_FIXTURE_ROOT:-}"/sys/class/input/event*; do
             [[ -e "$d" ]] || continue
-            props=$(udevadm info --query=property "$d" 2>/dev/null) || continue
+            props=$(_probe_udev_properties "$d") || continue
             if grep -q '^ID_INPUT_TOUCHPAD=1$' <<< "$props"; then
                 return 0
             fi
         done
     fi
     
-    # Check via libinput
-    if command -v libinput >/dev/null 2>&1; then
+    # Check via libinput.  Skipped under a fixture root: libinput has no probe
+    # seam, and running it during a replay would answer from the replaying
+    # host's hardware instead of the capture.
+    if [[ -z "${STRIX_HALO_FIXTURE_ROOT:-}" ]] && command -v libinput >/dev/null 2>&1; then
         local libinput_devices
         libinput_devices=$(libinput list-devices 2>/dev/null) || libinput_devices=""
         if grep -qi "touchpad" <<< "$libinput_devices"; then
@@ -81,10 +99,10 @@ input_keyboard_detected() {
     local d props strict="false"
     [[ "${CAP_DETACHABLE_KB:-false}" == "true" ]] && strict="true"
     
-    if command -v udevadm >/dev/null 2>&1; then
-        for d in /sys/class/input/event*; do
+    if _probe_udev_available; then
+        for d in "${STRIX_HALO_FIXTURE_ROOT:-}"/sys/class/input/event*; do
             [[ -e "$d" ]] || continue
-            props=$(udevadm info --query=property "$d" 2>/dev/null) || continue
+            props=$(_probe_udev_properties "$d") || continue
             grep -q '^ID_INPUT_KEYBOARD=1$' <<< "$props" || continue
             if [[ "$strict" == "true" ]] && grep -q '^ID_PATH=platform-i8042' <<< "$props"; then
                 continue
@@ -97,7 +115,7 @@ input_keyboard_detected() {
     
     # udev classification unavailable — fall back to the raw device list, still
     # skipping the i8042 stub when the keyboard is supposed to be detachable.
-    [[ -f /proc/bus/input/devices ]] || return 1
+    [[ -f "${STRIX_HALO_FIXTURE_ROOT:-}/proc/bus/input/devices" ]] || return 1
     if [[ "$strict" == "true" ]]; then
         # Records are blank-line separated; a record only counts when its name
         # says "keyboard" and its sysfs path is not the i8042 platform stub.
@@ -113,11 +131,11 @@ input_keyboard_detected() {
                 "N: Name="*) [[ "${line,,}" == *keyboard* ]] && is_kbd="true" ;;
                 "S: Sysfs=/devices/platform/i8042"*) is_stub="true" ;;
             esac
-        done < /proc/bus/input/devices
+        done < "${STRIX_HALO_FIXTURE_ROOT:-}/proc/bus/input/devices"
         [[ "$is_kbd" == "true" && "$is_stub" == "false" ]]
         return
     fi
-    grep -qi "keyboard" /proc/bus/input/devices
+    grep -qi "keyboard" "${STRIX_HALO_FIXTURE_ROOT:-}/proc/bus/input/devices"
 }
 
 # Check if hid_asus kernel module is loaded
@@ -125,7 +143,7 @@ input_keyboard_detected() {
 input_hid_asus_loaded() {
     # Capture before matching: `lsmod | grep -q` dies of SIGPIPE under pipefail.
     local modules
-    modules=$(lsmod 2>/dev/null) || return 1
+    modules=$(_probe_lsmod) || return 1
     grep -q "^hid_asus" <<< "$modules"
 }
 
@@ -140,7 +158,7 @@ input_hid_asus_loaded() {
 # the literal name can never match. On the GZ302 the switch is carried by the
 # "Asus WMI hotkeys" device, which reports SW=2.
 _input_sw_tablet_mode_present() {
-    [[ -r /proc/bus/input/devices ]] || return 2
+    [[ -r "${STRIX_HALO_FIXTURE_ROOT:-}/proc/bus/input/devices" ]] || return 2
 
     local line mask
     while IFS= read -r line; do
@@ -150,7 +168,7 @@ _input_sw_tablet_mode_present() {
         if (( 0x${mask} & (1 << 1) )); then
             return 0
         fi
-    done < <(grep '^B: SW=' /proc/bus/input/devices 2>/dev/null)
+    done < <(grep '^B: SW=' "${STRIX_HALO_FIXTURE_ROOT:-}/proc/bus/input/devices" 2>/dev/null)
 
     return 1
 }
@@ -167,7 +185,7 @@ input_tablet_mode_switch_available() {
     # /proc/bus/input/devices unavailable — fall back to the ACPI lid button.
     # The directory is firmware-named (LID, LID0, ...), so it must be globbed.
     local lid_state
-    for lid_state in /proc/acpi/button/lid/*/state; do
+    for lid_state in "${STRIX_HALO_FIXTURE_ROOT:-}"/proc/acpi/button/lid/*/state; do
         [[ -f "$lid_state" ]] && return 0
     done
     return 1
@@ -200,15 +218,41 @@ input_keyboard_remapped() {
 }
 # --- Configuration State Detection ---
 
-# Check if HID configuration is applied
-# Returns: 0 if configured, 1 if not
+# PROVENANCE: did this tool write hid-asus.conf?
+# Deliberately reads the LITERAL path, not the fixture-rooted one - this answer
+# gates rewriting/removing the real file, and deciding that from someone else's
+# capture would clobber a config we never wrote.
+# Returns: 0 if ours, 1 if not
+input_hid_config_is_ours() {
+    [[ -f /etc/modprobe.d/hid-asus.conf ]] || return 1
+    grep -q 'ASUS HID configuration for GZ302' /etc/modprobe.d/hid-asus.conf 2>/dev/null
+}
+
+# EFFECT: will the kernel honour the fnlock setting this file declares?
+# The old check only asked whether the string "fnlock_default" appeared in our
+# own file, which is why the shipped config
+#     options hid_asus fnlock_default=0
+# reported "applied" on a machine where hid_asus exposes no parameters at all
+# and the kernel logged "hid_asus: unknown parameter 'fnlock_default' ignored".
+# verify_modprobe_option reads the module name OUT of the file rather than
+# assuming hid_asus, so a pre-6.9.0 install is correctly REJECTED and then
+# self-heals on the next apply.
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL
+input_hid_config_status() {
+    # The literal path: verify_modprobe_option prefixes STRIX_HALO_FIXTURE_ROOT
+    # itself when it reads the file, and reports the real path in VERIFY_DETAIL.
+    verify_modprobe_option /etc/modprobe.d/hid-asus.conf fnlock_default 0
+}
+
+# COMPAT wrapper: true iff the setting is live or pending.
+# Used by apply short-circuits and "needs applying" tests.  Cleanup guards must
+# use input_hid_config_is_ours instead, or a REJECTED file this tool wrote
+# would be misread as user-provided and left on disk forever.
+# Returns: 0 if applied, 1 if not
 input_hid_config_applied() {
-    if [[ -f /etc/modprobe.d/hid-asus.conf ]]; then
-        if grep -q "fnlock_default" /etc/modprobe.d/hid-asus.conf 2>/dev/null; then
-            return 0
-        fi
-    fi
-    return 1
+    local rc=0
+    input_hid_config_status || rc=$?
+    [[ $rc -eq $VERIFY_LIVE || $rc -eq $VERIFY_PENDING ]]
 }
 
 # Check if touchpad forcing is applied (legacy workaround)
@@ -222,14 +266,50 @@ input_touchpad_forcing_applied() {
     return 1
 }
 
-# Check if i2c_hid_acpi quirk is applied
+# PROVENANCE: did this tool write i2c-hid-acpi-gz302.conf?  Literal path, for
+# the same reason as input_hid_config_is_ours - it gates an rm of the real file.
+# Returns: 0 if ours, 1 if not
+input_i2c_quirk_is_ours() {
+    [[ -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf ]] || return 1
+    grep -q 'ASUS GZ302 touchpad stability' /etc/modprobe.d/i2c-hid-acpi-gz302.conf 2>/dev/null
+}
+
+# EFFECT: no shipped kernel exposes a "quirks" parameter on i2c_hid_acpi (the
+# i2c-hid quirks live in an in-kernel DMI table), so a file declaring it earns
+# an "unknown parameter ... ignored" line on every boot and nothing more.
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL
+input_i2c_quirk_status() {
+    verify_modprobe_option /etc/modprobe.d/i2c-hid-acpi-gz302.conf quirks 0x01
+}
+
+# COMPAT wrapper: true iff the quirk is live or pending.
 # Returns: 0 if applied, 1 if not
 input_i2c_quirk_applied() {
-    [[ -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf ]] || return 1
-    grep -q "quirks=0x01" /etc/modprobe.d/i2c-hid-acpi-gz302.conf 2>/dev/null || return 1
-    # The file on its own proves nothing: modprobe discards unknown parameters,
-    # so the quirk only counts as applied when the module really exposes it.
-    _input_module_has_param i2c_hid_acpi quirks
+    local rc=0
+    input_i2c_quirk_status || rc=$?
+    [[ $rc -eq $VERIFY_LIVE || $rc -eq $VERIFY_PENDING ]]
+}
+
+# EFFECT-ONLY checks (no _applied sibling): a udev rule cannot be proven by its
+# own text, so both ask udev what the device actually carries.  The sysfs glob
+# is passed WITHOUT a fixture prefix - verify_udev_property expands it as
+# "${STRIX_HALO_FIXTURE_ROOT:-}/$glob" itself.
+
+# Copilot key (HID usage 0x070072) remapped to Insert on the ASUS keyboard.
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL
+input_keyboard_remap_status() {
+    verify_udev_rule_effect /etc/udev/hwdb.d/90-gz302-remap.hwdb \
+        'sys/class/input/event*' 'ID_VENDOR_ID=0b05' \
+        KEYBOARD_KEY_70072 insert
+}
+
+# uaccess tag on the keyboard, which is what lets an unprivileged RGB tool talk
+# to it.  No wanted value: any TAGS= line on the matching device proves the rule
+# was applied.
+# Returns: a VERIFY_* code; sets VERIFY_DETAIL
+input_rgb_rule_status() {
+    verify_udev_rule_effect /etc/udev/rules.d/99-gz302-keyboard.rules \
+        'sys/class/input/event*' 'ID_MODEL_ID=1a30' TAGS
 }
 
 # Check if HID reload service is enabled (legacy workaround)
@@ -325,14 +405,27 @@ EOF
 # Check whether a kernel module actually exposes a module parameter
 # Args: $1 = module name, $2 = parameter name
 # Returns: 0 if the parameter exists, 1 if not
-_input_module_has_param() {
-    local module="$1" param="$2" sysfs_name parms
-    sysfs_name="${module//-/_}"
-    
-    [[ -e "/sys/module/${sysfs_name}/parameters/${param}" ]] && return 0
-    
-    parms=$(modinfo -F parm "$module" 2>/dev/null) || return 1
-    grep -q "^${param}:" <<< "$parms"
+# Delegates to the verify layer so there is exactly one implementation of this
+# question in the suite; the name is kept because _input_fnlock_option_line and
+# input_apply_i2c_quirk call it.
+_input_module_has_param() { verify_module_has_param "$1" "$2"; }
+
+# Write <content> to <path> only when it differs from what is already there.
+# Rewriting an unchanged file refreshes its mtime, and verify_modprobe_option's
+# false-alarm invariant uses "the file predates this boot" as the evidence that
+# modprobe.d was ignored - so an unconditional rewrite on every run would mask a
+# genuine REJECTED setting as PENDING forever.
+# Args: $1 = path, $2 = content (no trailing newline)
+# Returns: 0 on success
+_input_write_if_changed() {
+    local path="$1" content="$2" current=""
+    if [[ -f "$path" ]]; then
+        current=$(cat "$path" 2>/dev/null) || current=""
+        if [[ "$current" == "$content" ]]; then
+            return 0
+        fi
+    fi
+    printf '%s\n' "$content" > "$path"
 }
 
 # Emit the fnlock modprobe option for whichever module actually owns it
@@ -361,7 +454,8 @@ _input_kernel_ver() {
     fi
     
     local kernel_version major minor
-    kernel_version=$(uname -r | cut -d. -f1,2)
+    kernel_version=$(_probe_uname_r) || kernel_version=""
+    kernel_version=$(cut -d. -f1,2 <<< "$kernel_version")
     major=$(echo "$kernel_version" | cut -d. -f1)
     minor=$(echo "$kernel_version" | cut -d. -f2)
     echo $((major * 100 + minor))
@@ -376,13 +470,15 @@ input_apply_hid_config() {
     fi
     
     # Create HID configuration
-    {
+    local content
+    content=$(
         printf '# ASUS HID configuration for GZ302\n'
         printf '# fnlock_default=0: F1-F12 keys work as media keys by default\n'
         printf '# Kernel 6.15+ includes mature touchpad gesture support and improved ASUS HID integration\n'
         _input_fnlock_option_line || \
             printf '# no loaded module exposes fnlock_default on kernel %s\n' "$(uname -r)"
-    } > /etc/modprobe.d/hid-asus.conf
+    )
+    _input_write_if_changed /etc/modprobe.d/hid-asus.conf "$content"
     
     return 0
 }
@@ -396,7 +492,8 @@ input_apply_touchpad_forcing() {
     # Each option is written on its own line, gated on the module that owns it —
     # a combined "options hid_asus fnlock_default=0 enable_touchpad=1" line is
     # discarded wholesale by modprobe when hid_asus has neither parameter.
-    {
+    local content
+    content=$(
         printf '# ASUS HID configuration for GZ302\n'
         printf '# fnlock_default=0: F1-F12 keys work as media keys by default\n'
         _input_fnlock_option_line || \
@@ -405,7 +502,8 @@ input_apply_touchpad_forcing() {
             printf '# enable_touchpad=1: Force touchpad detection (needed for kernel < 6.17)\n'
             printf 'options hid_asus enable_touchpad=1\n'
         fi
-    } > /etc/modprobe.d/hid-asus.conf
+    )
+    _input_write_if_changed /etc/modprobe.d/hid-asus.conf "$content"
     
     return 0
 }
@@ -418,13 +516,15 @@ input_remove_touchpad_forcing() {
     fi
     
     # Remove forcing option, keep fnlock setting
-    {
+    local content
+    content=$(
         printf '# ASUS HID configuration for GZ302\n'
         printf '# fnlock_default=0: F1-F12 keys work as media keys by default\n'
         printf '# Kernel 6.17+ handles touchpad enumeration natively\n'
         _input_fnlock_option_line || \
             printf '# no loaded module exposes fnlock_default on kernel %s\n' "$(uname -r)"
-    } > /etc/modprobe.d/hid-asus.conf
+    )
+    _input_write_if_changed /etc/modprobe.d/hid-asus.conf "$content"
     
     return 0
 }
@@ -437,8 +537,9 @@ input_apply_i2c_quirk() {
     # "unknown parameter ... ignored" line on every boot. Clear our own stale
     # file instead, and keep the write for a kernel that does expose it.
     if ! _input_module_has_param i2c_hid_acpi quirks; then
-        if [[ -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf ]] && \
-           grep -q 'ASUS GZ302 touchpad stability' /etc/modprobe.d/i2c-hid-acpi-gz302.conf 2>/dev/null; then
+        # Cleanup guard: provenance, never the tri-state wrapper.  A REJECTED
+        # file this tool wrote must still be recognised as ours and removed.
+        if input_i2c_quirk_is_ours; then
             rm -f /etc/modprobe.d/i2c-hid-acpi-gz302.conf
         fi
         return 0
@@ -588,8 +689,23 @@ input_apply_configuration() {
 # Returns: 0 if created
 input_create_keyboard_remap() {
     # Detect the keyboard product ID (standard is 1a30, but some variants differ)
-    local product_id
-    product_id=$(lsusb | grep -i "ASUS.*Keyboard" | grep -oP '0b05:[\da-f]{4}' | head -1 | cut -d: -f2 | tr '[:lower:]' '[:upper:]')
+    #
+    # Capture-then-here-string, no pipeline.  The old form
+    #   lsusb | grep -i ... | grep -oP ... | head -1 | cut ... | tr ...
+    # aborted the whole installer on any machine with no ASUS keyboard in lsusb:
+    # grep exits 1, pipefail propagates it, `set -e` kills the shell inside a
+    # write path, and the "$product_id" fallback below was never reached.
+    #
+    # Deliberately bare `lsusb`, not _probe_lsusb: this is a WRITE path, and the
+    # fixture seam must never reach one - writing /etc from someone else's
+    # capture is exactly what the seam exists to prevent.
+    local product_id usb_list match ids
+    usb_list=$(lsusb 2>/dev/null) || usb_list=""
+    match=$(grep -i "ASUS.*Keyboard" <<< "$usb_list") || match=""
+    ids=$(grep -oE '0b05:[0-9a-fA-F]{4}' <<< "$match") || ids=""
+    product_id=$(head -n 1 <<< "$ids")
+    product_id="${product_id#*:}"
+    product_id="${product_id^^}"
     
     # Fallback to standard GZ302EA product ID if not detected
     [[ -z "$product_id" ]] && product_id="1A30"
@@ -658,6 +774,20 @@ input_verify_working() {
 
 # --- Status Functions ---
 
+# Read one `"key": "value"` field out of a input_get_state() blob.
+#
+# `echo "$state" | grep KEY | cut -d'"' -f4` is the producer-into-pipeline shape
+# that misreported present hardware as absent in 130a6a9.  The installer sources
+# every library into one shell under `set -euo pipefail`, so a key the blob does
+# not carry makes grep — and therefore the whole pipeline — non-zero, and the
+# caller dies half-way through printing its own status.  Capture first, match
+# with a here-string, and let a missing key yield an empty value instead.
+_input_state_field() {
+    local blob="$1" key="$2" line
+    line=$(grep -m1 "\"${key}\":" <<< "$blob") || return 0
+    cut -d'"' -f4 <<< "$line"
+}
+
 # Print comprehensive input status (for user display)
 # Output: Formatted status information
 input_print_status() {
@@ -673,14 +803,14 @@ input_print_status() {
     local tablet_daemon
     local keyboard_remapped
     
-    hid_detected=$(echo "$state" | grep "hid_devices_detected" | cut -d'"' -f4)
-    touchpad_detected=$(echo "$state" | grep "touchpad_detected" | cut -d'"' -f4)
-    keyboard_detected=$(echo "$state" | grep "keyboard_detected" | cut -d'"' -f4)
-    hid_module_loaded=$(echo "$state" | grep "hid_module_loaded" | cut -d'"' -f4)
-    touchpad_forcing=$(echo "$state" | grep "touchpad_forcing_applied" | cut -d'"' -f4)
-    reload_service=$(echo "$state" | grep "reload_service_enabled" | cut -d'"' -f4)
-    tablet_daemon=$(echo "$state" | grep "tablet_daemon_running" | cut -d'"' -f4)
-    keyboard_remapped=$(echo "$state" | grep "keyboard_remapped" | cut -d'"' -f4)
+    hid_detected=$(_input_state_field "$state" "hid_devices_detected")
+    touchpad_detected=$(_input_state_field "$state" "touchpad_detected")
+    keyboard_detected=$(_input_state_field "$state" "keyboard_detected")
+    hid_module_loaded=$(_input_state_field "$state" "hid_module_loaded")
+    touchpad_forcing=$(_input_state_field "$state" "touchpad_forcing_applied")
+    reload_service=$(_input_state_field "$state" "reload_service_enabled")
+    tablet_daemon=$(_input_state_field "$state" "tablet_daemon_running")
+    keyboard_remapped=$(_input_state_field "$state" "keyboard_remapped")
     
     echo "Input Status (ASUS HID Devices):"
     echo "  HID Devices:         $hid_detected"
@@ -736,6 +866,17 @@ State Check Functions:
   input_tablet_daemon_running       - Check if tablet daemon running
   input_get_state                   - Get comprehensive state (JSON)
 
+Provenance Functions (did THIS tool write the file? cleanup guards only):
+  input_hid_config_is_ours          - hid-asus.conf carries our marker
+  input_i2c_quirk_is_ours           - i2c-hid-acpi-gz302.conf carries our marker
+
+Tri-state Status Functions (return VERIFY_*, set VERIFY_DETAIL):
+  input_hid_config_status           - Will the kernel honour fnlock_default?
+  input_i2c_quirk_status            - Will the kernel honour i2c_hid_acpi quirks?
+  input_keyboard_remap_status       - Does udev report KEYBOARD_KEY_70072?
+  input_rgb_rule_status             - Does udev tag the keyboard for uaccess?
+  Call these DIRECTLY, never inside $( ) - a subshell discards VERIFY_DETAIL.
+
 Configuration Functions (idempotent):
   input_apply_hid_config            - Apply basic HID configuration
   input_apply_touchpad_forcing      - Apply touchpad forcing (kernel < 6.17)
@@ -780,3 +921,15 @@ Design Principles:
   - Handles legacy workarounds cleanup
 HELP
 }
+
+# --- Verification registry ---------------------------------------------------
+# One registry, shared by --verify and --report.  Registered at source time and
+# guarded so a standalone source of this library still works.  The capability
+# gate is what stops the ten unverified device profiles reporting REJECT for
+# ASUS hardware they do not have.
+if declare -F verify_register >/dev/null 2>&1; then
+    verify_register input "fnlock default"    input_hid_config_status      CAP_ASUS_WMI
+    verify_register input "i2c-hid quirk"     input_i2c_quirk_status       CAP_ASUS_WMI
+    verify_register input "Copilot to Insert" input_keyboard_remap_status  CAP_DETACHABLE_KB
+    verify_register input "keyboard RGB rule" input_rgb_rule_status        CAP_ASUS_WMI
+fi

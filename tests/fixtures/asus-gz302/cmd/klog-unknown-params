@@ -1,0 +1,2 @@
+hid_asus: unknown parameter 'fnlock_default' ignored
+i2c_hid_acpi: unknown parameter 'quirks' ignored

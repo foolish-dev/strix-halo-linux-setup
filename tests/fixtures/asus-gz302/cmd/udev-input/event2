@@ -1,0 +1,11 @@
+DEVPATH=/devices/platform/i8042/serio0/input/input2/event2
+DEVNAME=/dev/input/event2
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_INPUT_KEYBOARD=1
+ID_BUS=i8042
+ID_PATH=platform-i8042-serio-0
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:

@@ -1,6 +1,6 @@
 # Strix Halo Linux Setup
 
-![Version](https://img.shields.io/badge/version-6.9.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-6.10.0-blue?style=for-the-badge)
 ![Kernel](https://img.shields.io/badge/Kernel-6.12%2B-orange?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-AMD%20Strix%20Halo-red?style=for-the-badge)
@@ -64,6 +64,25 @@ sudo ./strix-halo-setup.sh --fixes-only    # Hardware fixes only
 sudo ./strix-halo-setup.sh --no-z13ctl     # Skip z13ctl installation
 sudo ./strix-halo-setup.sh --help          # Show all options
 ```
+
+These apply nothing and need no `sudo`:
+
+```bash
+./strix-halo-setup.sh --verify             # Check every applied fix against live kernel state
+./strix-halo-setup.sh --print-profile      # Print the detected device profile
+./strix-halo-setup.sh --report             # Write a shareable diagnostic bundle
+./strix-halo-setup.sh --report-out DIR     # ...into DIR instead of your home directory
+```
+
+`--verify` proves each fix from the kernel's own state — `/sys/module/*/parameters`,
+`/proc/cmdline`, `systemctl`, udev — never from the config file the installer wrote.
+It exits 1 only when the kernel is actively rejecting a setting; a check that cannot
+observe an effect reports `unknown` rather than failing.
+
+`--report` writes a Markdown bundle plus a machine-readable device fixture. Serial
+numbers, MAC addresses, filesystem UUIDs, WiFi network names, your hostname and your
+username are removed before the file is written, and it is re-scanned afterwards to
+confirm. See [docs/diagnostic-report.md](docs/diagnostic-report.md).
 
 ---
 
@@ -169,10 +188,15 @@ strix-halo-linux-setup/
 │   ├── device-manager.sh      # Hardware detection, device profiles, capabilities (NEW)
 │   ├── device-profile-data.sh # Known-device matrix and profile capability data
 │   ├── kernel-compat.sh       # Kernel version detection
+│   ├── probe-source.sh        # The single seam between this toolkit and live state
+│   ├── verify-manager.sh      # Tri-state verification of applied fixes (--verify)
+│   ├── fixture-format.sh      # Device fixture format: capture, pack, validate, unpack
+│   ├── report-manager.sh      # Diagnostic bundle generator (--report)
 │   └── ... (wifi, gpu, audio, etc.)
 ├── modules/                   # Optional feature packs (gaming, llm, etc.)
 ├── scripts/                   # System scripts and repo sync helpers
 ├── tests/                     # Regression checks and version validation helpers
+│   └── fixtures/              # Captured per-device hardware state, replayed in CI
 ├── command-center/            # PyQt6 system tray application
 ├── pkg/arch/                  # Arch PKGBUILD
 └── docs/                      # User guides and changelogs
@@ -227,6 +251,7 @@ This removes all GZ302 tools, z13ctl daemon/config, systemd services, udev rules
 
 - **Documentation:** See the [docs/](docs/) directory for user guides and [docs/technical/](docs/technical/) for hardware research.
 - **AI Guidelines:** Strict rules for LLM/Copilot contributions are in [.github/copilot-instructions.md](.github/copilot-instructions.md).
+- **Diagnostic report:** Run `./strix-halo-setup.sh --report` (no sudo) before opening an issue and attach the bundle. It captures the device profile, the tri-state fix verification and a replayable hardware fixture, with identifying data removed and re-scanned for. See [docs/diagnostic-report.md](docs/diagnostic-report.md); to contribute a fixture for a device that is not the GZ302, see [docs/contributing-a-device-fixture.md](docs/contributing-a-device-fixture.md).
 - **Issues:** Report bugs on the [Issues page](https://github.com/foolish-dev/strix-halo-linux-setup/issues).
 - **Development:** See [CONTRIBUTING.md](CONTRIBUTING.md).
 

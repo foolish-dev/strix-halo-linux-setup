@@ -816,5 +816,5 @@ The GZ302 now has comprehensive AI/ML support through the updated `gz302-llm.sh`
 
 **Document Version**: 1.0 
 **Created**: November 7, 2025 
-**Maintainer**: th3cavalry 
+**Maintainer**: foolish-dev (fork of th3cavalry's GZ302-Linux-Setup) 
 **License**: Same as parent repository

@@ -2,6 +2,125 @@
 
 All notable changes to Strix Halo Linux Setup will be documented in this file.
 
+## [6.10.0] - 2026-09-05
+
+Three passes of real-hardware fixes (6.8.0, 6.9.0) kept finding the same defect shape: the installer
+writes a config file for a module or parameter that does not exist, or runs a probe that can never match,
+and then reports success. This release builds the machinery that makes that class of bug fail loudly —
+a verification layer that proves effect against the kernel, a fixture harness that replays real hardware,
+and a diagnostic bundle that turns a user's machine into a test case.
+
+Verified on an ASUS ROG Flow Z13 (GZ302EA), Ryzen AI MAX+ 395, CachyOS, kernel 7.2.2.
+Test coverage went from 93 assertions to 326, and CI from 8 jobs to 11.
+
+### Added
+
+#### Verification layer
+
+- **`strix-halo-lib/verify-manager.sh`** — tri-state verification of every applied fix, replacing boolean
+  `*_applied()` predicates that could only answer "we wrote the file". Statuses are `LIVE`, `PENDING`
+  (applied correctly, needs a reboot), `REJECTED` (applied and the kernel will never honour it), `ABSENT`,
+  `UNKNOWN` and `NA`. Resolvers prove effect from `/sys/module/<m>/parameters/<p>`, `/proc/cmdline`,
+  `modinfo`, `systemctl` and udev properties rather than from the tool's own files.
+- **`--verify`** runs every registered check and exits non-zero when the kernel is ignoring something the
+  installer applied. It applies nothing, needs no root, and degrades gracefully where a probe needs
+  privilege. **`--verify --json`** emits the same registry as machine-readable JSON.
+- **The false-alarm invariant.** A value mismatch may only reach `REJECTED` when the config file predates
+  the current boot *and* the live parameter is not writable — `amdgpu` parameters are `0444`, but
+  `mt7925e/disable_aspm` is `0644`, so a parameter another daemon can change degrades to `PENDING`. The
+  other four rejection paths (built-in module, no such module, no such parameter, kernel log says
+  "unknown parameter ... ignored") are structural and fire immediately. A fresh `--fixes-only` followed by
+  `--verify` can therefore never produce a false alarm.
+- **One registry for `--verify` and `--report`.** `verify_register <component> <label> <status_fn>
+  [CAP_GATE]` de-duplicates on the status function, so double-sourcing a library cannot duplicate a row,
+  and a capability gate reports `n/a` without calling the resolver — which is what keeps the ten
+  unverified device profiles from reporting failures for hardware they do not have.
+
+#### Fixture harness
+
+- **`strix-halo-lib/probe-source.sh`** — the single indirection point between the toolkit and live system
+  state. Filesystem reads expand a bare `"${STRIX_HALO_FIXTURE_ROOT:-}"` prefix, empty in production, so
+  there is no second code path; command output comes from `_probe_*` helpers wrapping `lspci`, `lsusb`,
+  `lsmod`, `aplay`, `modinfo`, `modprobe -c`, `journalctl -k`, `systemctl`, `udevadm`, `/proc/stat` btime
+  and file mtimes/modes.
+- **`strix-halo-lib/fixture-format.sh`** and **`tests/fixtures/`** — a capture format that records a real
+  machine's probe surface, and a replay suite that drives the *real* detection and verification functions
+  against it. This replaces printf mocks that actively hid a bug: commit 130a6a9 documented that the pipe
+  buffer absorbed a producer's output before `grep` exited, so 85 assertions stayed green while six probes
+  were broken on real hardware.
+- **`tests/fixtures/asus-gz302/`** — the first real hardware fixture, captured from a GZ302EA and replayed
+  by CI. Coverage is 1 of 10 known profiles; the other nine remain vendor spec-sheet claims.
+- **`scripts/capture-device-fixture.sh`** produces a fixture from the running machine and refuses to
+  succeed unless live detection and fixture replay agree on every key *and* all verification rows resolve
+  identically. **`scripts/extract-fixture.sh`** recovers a fixture from a pasted diagnostic report.
+- **Contradiction handling.** A fixture that disagrees with `device-profile-data.sh` is reported as
+  "the profile record is probably wrong", separately from a malformed fixture, and cannot be silenced by
+  editing the fixture — so correcting a profile to match real hardware is a visible act in the diff rather
+  than a quiet edit. Nine of the ten unverified profiles assert three capabilities from spec sheets, so
+  the first real fixture from those devices is *expected* to fail; that failure is the feature working.
+
+#### Diagnostic report
+
+- **`--report`** writes a shareable bundle: the detected profile and capability flags, distro/kernel/
+  bootloader facts, every verification result, and the raw probe data — where the raw half is a valid
+  fixture, so a submitted issue is directly usable as a test case. Redaction is on by default (hostnames,
+  usernames, MACs, UUIDs, serials, SSIDs) and is itself tested; kernel-log excerpts are opt-in behind
+  `--report-logs` because they are the highest-PII surface in the bundle.
+- **`--print-profile`** and **`--fixture-root`** for scripted and replayed use.
+- The dashboard now surfaces verification state, including `PENDING REBOOT`, which it previously had no
+  way to express.
+
+#### CI
+
+- Three new jobs — `verification-layer`, `hardware-fixtures` (replay + sanitisation lint) and
+  `report-redaction` — plus `detection-pipeline-robustness`, which existed but was never wired in. All run
+  on `ubuntu-latest` with no package installs.
+
+### Fixed
+
+- **`fnlock_default` was written for a module with no parameters.** `hid_asus` exposes none; the parameter
+  belongs to `asus_wmi`. On the flagship, `/sys/module/asus_wmi/parameters/fnlock_default` reads `Y` while
+  the kernel log says `hid_asus: unknown parameter 'fnlock_default' ignored` — the setting never took
+  effect, and `input_hid_config_applied()` reported success anyway. The apply path now writes the owning
+  module and `--verify` reports the old file as `REJECTED`, so an existing install self-heals.
+- **`CAP_INTERNAL_OLED` was wrong for the flagship.** The `asus-gz302` row claimed an OLED panel; the
+  eDP-1 EDID reports Tianma `TL134ADXP03`, 29x18 cm — the IPS "Nebula Display". Corrected to `false`.
+  Nothing gates behaviour on the flag (the PSR-SU/Replay mask applies unconditionally on supported
+  kernels), so this changes reported metadata only.
+- **The `CAP_DETACHABLE_KB` probe could never run.** `device_detect_detachable_kb()` opened by returning
+  early whenever the static record already said `true`, which it does for the only device ever tested. The
+  measurement is now authoritative wherever it can reach a verdict, the static record answers only where
+  it cannot, and which side decided is recorded in `CAP_DETACHABLE_KB_SOURCE`.
+- **The fixture capture was silently lossy.** `fixture_capture_tree()` never emitted the `expected` file,
+  so a fixture extracted from a `--report` bundle asserted nothing; and `/etc/udev/{rules.d,hwdb.d}` plus
+  the `KEYBOARD_KEY_*`/`TAGS` properties were dropped, so two rows that are `LIVE` on real hardware
+  replayed as "not installed". Fixing only the first half would have turned that into a false `REJECT`.
+- **`kernel-compat.sh` and `state-manager.sh` aborted the caller when sourced twice** under `set -e` via
+  bare top-level `readonly`, and `kernel-compat.sh` read `uname -r` outside the probe seam — so a
+  contributor's fixture would have been judged against the maintainer's kernel.
+- **25 unguarded `echo "$state" | grep | cut` pipelines** in the wifi, audio, input and GPU status
+  functions — the same producer-into-pipeline shape that, under installer-wide `pipefail`, silently
+  misreported present hardware as absent in 6.8.0.
+- **`--report-out` silently ignored an unusable directory** and wrote to the home directory while
+  reporting the requested path.
+
+### Removed
+
+- **`strix-halo-lib/state-manager.sh`** (609 lines). Nothing outside the library ever called
+  `state_mark_applied`, `state_is_applied`, `state_log` or `state_backup_file`; its only external
+  reference created directories and discarded failures. It answered "what did we apply?" from a
+  bookkeeping cache that can drift from reality, which is the failure mode this release exists to
+  eliminate — the verification layer answers the same question by asking the kernel. It was also the last
+  code writing pre-rebrand `/var/lib/gz302` and `/var/backups/gz302` paths, precisely because nothing
+  exercised it. The contributor instruction telling future authors to use it for idempotency tracking now
+  points at the verification layer instead.
+
+### Documentation
+
+- `docs/contributing-a-device-fixture.md` and `docs/diagnostic-report.md`, plus issue templates routing
+  bug reports through `--report`. The contributing guide states explicitly that a failing first fixture
+  from an unverified device usually means the profile record is wrong, not the fixture.
+
 ## [6.9.0] - 2026-09-04
 
 Second real-hardware correctness pass, verified against an ASUS ROG Flow Z13 (GZ302EA),

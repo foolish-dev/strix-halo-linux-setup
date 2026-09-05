@@ -1,0 +1,2810 @@
+fixture_format=1
+device_key=asus-gz302
+device_label=ASUS ROG Flow Z13 (GZ302)
+captured_kernel=7.2.2-1-cachyos
+captured_distro=cachyos
+captured_date=2026-09-05T12:39:34Z
+capture_tool_version=6.9.0
+verified_on_real_hardware=true
+---BEGIN file cmd/aplay-l---
+**** List of PLAYBACK Hardware Devices ****
+card 0: Generic [HD-Audio Generic], device 3: HDMI 0 [HDMI 0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: Generic [HD-Audio Generic], device 7: HDMI 1 [HDMI 1]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: Generic [HD-Audio Generic], device 8: HDMI 2 [HDMI 2]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: Generic [HD-Audio Generic], device 9: HDMI 3 [HDMI 3]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: Generic_1 [HD-Audio Generic], device 0: ALC294 Analog [ALC294 Analog]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+---END file cmd/aplay-l---
+---BEGIN file cmd/cpu-model---
+AMD RYZEN AI MAX+ 395 w/ Radeon 8060S
+---END file cmd/cpu-model---
+---BEGIN file cmd/file-modes---
+sys/module/amdgpu/initstate 444
+sys/module/amdgpu/parameters/abmlevel 444
+sys/module/amdgpu/parameters/agp 444
+sys/module/amdgpu/parameters/aspm 444
+sys/module/amdgpu/parameters/async_gfx_ring 444
+sys/module/amdgpu/parameters/audio 444
+sys/module/amdgpu/parameters/backlight 444
+sys/module/amdgpu/parameters/bad_page_threshold 444
+sys/module/amdgpu/parameters/bapm 444
+sys/module/amdgpu/parameters/cg_mask 444
+sys/module/amdgpu/parameters/cik_support 444
+sys/module/amdgpu/parameters/compute_multipipe 444
+sys/module/amdgpu/parameters/cwsr_enable 444
+sys/module/amdgpu/parameters/damageclips 444
+sys/module/amdgpu/parameters/dc 444
+sys/module/amdgpu/parameters/dcdebugmask 444
+sys/module/amdgpu/parameters/dcfeaturemask 444
+sys/module/amdgpu/parameters/debug_evictions 644
+sys/module/amdgpu/parameters/debug_mask 444
+sys/module/amdgpu/parameters/deep_color 444
+sys/module/amdgpu/parameters/disable_cu 444
+sys/module/amdgpu/parameters/discovery 444
+sys/module/amdgpu/parameters/disp_priority 444
+sys/module/amdgpu/parameters/dpm 444
+sys/module/amdgpu/parameters/emu_mode 444
+sys/module/amdgpu/parameters/enforce_isolation 444
+sys/module/amdgpu/parameters/exp_hw_support 444
+sys/module/amdgpu/parameters/force_asic_type 444
+sys/module/amdgpu/parameters/forcelongtraining 444
+sys/module/amdgpu/parameters/freesync_video 444
+sys/module/amdgpu/parameters/fw_load_type 444
+sys/module/amdgpu/parameters/gpu_recovery 444
+sys/module/amdgpu/parameters/halt_if_hws_hang 644
+sys/module/amdgpu/parameters/hdmi_hpd_debounce_delay_ms 644
+sys/module/amdgpu/parameters/hw_i2c 444
+sys/module/amdgpu/parameters/hws_gws_support 444
+sys/module/amdgpu/parameters/hws_max_conc_proc 444
+sys/module/amdgpu/parameters/ip_block_mask 444
+sys/module/amdgpu/parameters/lbpw 444
+sys/module/amdgpu/parameters/lockup_timeout 444
+sys/module/amdgpu/parameters/max_num_of_queues_per_device 444
+sys/module/amdgpu/parameters/mcbp 444
+sys/module/amdgpu/parameters/mes_log_enable 444
+sys/module/amdgpu/parameters/modeset 444
+sys/module/amdgpu/parameters/msi 444
+sys/module/amdgpu/parameters/mtype_local 444
+sys/module/amdgpu/parameters/no_queue_eviction_on_vm_fault 444
+sys/module/amdgpu/parameters/no_system_mem_limit 644
+sys/module/amdgpu/parameters/noretry 644
+sys/module/amdgpu/parameters/num_kcq 444
+sys/module/amdgpu/parameters/pcie_gen2 444
+sys/module/amdgpu/parameters/pcie_gen_cap 444
+sys/module/amdgpu/parameters/pcie_lane_cap 444
+sys/module/amdgpu/parameters/pcie_p2p 444
+sys/module/amdgpu/parameters/pg_mask 444
+sys/module/amdgpu/parameters/ppfeaturemask 444
+sys/module/amdgpu/parameters/ptl 444
+sys/module/amdgpu/parameters/queue_preemption_timeout_ms 644
+sys/module/amdgpu/parameters/ras_enable 444
+sys/module/amdgpu/parameters/ras_mask 444
+sys/module/amdgpu/parameters/rebar 444
+sys/module/amdgpu/parameters/reset_method 644
+sys/module/amdgpu/parameters/runpm 444
+sys/module/amdgpu/parameters/sched_hw_submission 444
+sys/module/amdgpu/parameters/sched_jobs 444
+sys/module/amdgpu/parameters/sched_policy 444
+sys/module/amdgpu/parameters/sdma_phase_quantum 444
+sys/module/amdgpu/parameters/seamless 444
+sys/module/amdgpu/parameters/send_sigterm 444
+sys/module/amdgpu/parameters/sg_display 444
+sys/module/amdgpu/parameters/si_support 444
+sys/module/amdgpu/parameters/smu_memory_pool_size 444
+sys/module/amdgpu/parameters/smu_pptable_id 444
+sys/module/amdgpu/parameters/svm_default_granularity 644
+sys/module/amdgpu/parameters/timeout_fatal_disable 644
+sys/module/amdgpu/parameters/timeout_period 644
+sys/module/amdgpu/parameters/tmz 444
+sys/module/amdgpu/parameters/umsch_mm 444
+sys/module/amdgpu/parameters/umsch_mm_fwlog 444
+sys/module/amdgpu/parameters/uni_mes 444
+sys/module/amdgpu/parameters/use_xgmi_p2p 444
+sys/module/amdgpu/parameters/user_partt_mode 444
+sys/module/amdgpu/parameters/user_queue 444
+sys/module/amdgpu/parameters/vcnfw_log 444
+sys/module/amdgpu/parameters/virtual_display 444
+sys/module/amdgpu/parameters/vis_vramlimit 444
+sys/module/amdgpu/parameters/visualconfirm 444
+sys/module/amdgpu/parameters/vm_block_size 444
+sys/module/amdgpu/parameters/vm_fault_stop 444
+sys/module/amdgpu/parameters/vm_fragment_size 444
+sys/module/amdgpu/parameters/vm_size 444
+sys/module/amdgpu/parameters/vm_update_mode 444
+sys/module/amdgpu/parameters/wbrf 444
+sys/module/asus_wmi/initstate 444
+sys/module/asus_wmi/parameters/fnlock_default 444
+sys/module/hid_asus/initstate 444
+sys/module/i2c_hid_acpi/initstate 444
+sys/module/mt7925e/initstate 444
+sys/module/mt7925e/parameters/disable_aspm 644
+sys/module/snd_hda_intel/initstate 444
+sys/module/snd_hda_intel/parameters/align_buffer_size 644
+sys/module/snd_hda_intel/parameters/bdl_pos_adj 644
+sys/module/snd_hda_intel/parameters/beep_mode 444
+sys/module/snd_hda_intel/parameters/ctl_dev_id 444
+sys/module/snd_hda_intel/parameters/dmic_detect 444
+sys/module/snd_hda_intel/parameters/enable 444
+sys/module/snd_hda_intel/parameters/enable_msi 444
+sys/module/snd_hda_intel/parameters/id 444
+sys/module/snd_hda_intel/parameters/index 444
+sys/module/snd_hda_intel/parameters/jackpoll_ms 444
+sys/module/snd_hda_intel/parameters/model 444
+sys/module/snd_hda_intel/parameters/patch 444
+sys/module/snd_hda_intel/parameters/pm_blacklist 644
+sys/module/snd_hda_intel/parameters/position_fix 444
+sys/module/snd_hda_intel/parameters/power_save 644
+sys/module/snd_hda_intel/parameters/power_save_controller 644
+sys/module/snd_hda_intel/parameters/probe_mask 444
+sys/module/snd_hda_intel/parameters/probe_only 444
+sys/module/snd_hda_intel/parameters/single_cmd 444
+sys/module/snd_hda_intel/parameters/snoop 444
+sys/module/snd_hda_scodec_cs35l41_i2c/initstate 444
+sys/module/snd_hda_scodec_cs35l41_spi/initstate 444
+---END file cmd/file-modes---
+---BEGIN file cmd/file-mtimes---
+etc/default/limine 1787866481
+etc/modprobe.d/amdgpu.conf 1787866439
+etc/modprobe.d/hid-asus.conf 1787866471
+etc/modprobe.d/i2c-hid-acpi-gz302.conf 1787866471
+etc/udev/hwdb.d/90-gz302-remap.hwdb 1787872653
+etc/udev/rules.d/64-limesuite.rules 1761691680
+etc/udev/rules.d/99-gz302-keyboard.rules 1787866471
+etc/udev/rules.d/99-z13ctl.rules 1787872656
+---END file cmd/file-mtimes---
+---BEGIN file cmd/klog-unknown-params---
+hid_asus: unknown parameter 'fnlock_default' ignored
+i2c_hid_acpi: unknown parameter 'quirks' ignored
+---END file cmd/klog-unknown-params---
+---BEGIN file cmd/lsmod---
+Module                  Size  Used by
+snd_seq_dummy          16384  0
+rfcomm                114688  4
+snd_hrtimer            16384  1
+snd_seq               139264  7 snd_seq_dummy
+snd_seq_device         16384  1 snd_seq
+tcp_diag               20480  0
+inet_diag              20480  1 tcp_diag
+ccm                    20480  2
+algif_hash             16384  1
+algif_skcipher         12288  1
+af_alg                 36864  6 algif_hash,algif_skcipher
+bnep                   36864  2
+vfat                   24576  1
+fat                   114688  1 vfat
+snd_acp70              12288  0
+snd_acp_pdm            12288  1 snd_acp70
+snd_acp_i2s            20480  1 snd_acp70
+snd_acp_pcm            16384  1 snd_acp70
+snd_sof_amd_acp70      16384  0
+snd_sof_amd_acp63      16384  0
+snd_sof_amd_vangogh    16384  0
+snd_sof_amd_rembrandt    16384  0
+snd_sof_amd_renoir     16384  0
+snd_sof_amd_acp        73728  5 snd_sof_amd_acp70,snd_sof_amd_rembrandt,snd_sof_amd_vangogh,snd_sof_amd_acp63,snd_sof_amd_renoir
+snd_sof_pci            24576  5 snd_sof_amd_acp70,snd_sof_amd_rembrandt,snd_sof_amd_vangogh,snd_sof_amd_acp63,snd_sof_amd_renoir
+snd_sof_xtensa_dsp     16384  1 snd_sof_amd_acp
+snd_sof               516096  2 snd_sof_amd_acp,snd_sof_pci
+amd_atl                65536  1
+snd_sof_utils          16384  1 snd_sof
+intel_rapl_msr         24576  0
+snd_pci_acp7x          20480  0
+intel_rapl_common      53248  1 intel_rapl_msr
+snd_pci_ps             36864  0
+snd_soc_acpi_amd_match    28672  3 snd_sof_amd_acp70,snd_sof_amd_acp63,snd_pci_ps
+snd_hda_codec_alc269   167936  1
+soundwire_amd          49152  2 snd_sof_amd_acp,snd_pci_ps
+snd_hda_codec_realtek_lib    73728  1 snd_hda_codec_alc269
+soundwire_generic_allocation    20480  1 soundwire_amd
+snd_amd_sdw_acpi       16384  2 snd_sof_amd_acp,snd_pci_ps
+snd_hda_scodec_component    20480  1 snd_hda_codec_alc269
+soundwire_bus        1216512  2 soundwire_generic_allocation,soundwire_amd
+snd_hda_codec_generic   126976  2 snd_hda_codec_realtek_lib,snd_hda_codec_alc269
+snd_soc_sdca          147456  2 snd_soc_acpi_amd_match,soundwire_bus
+snd_hda_codec_atihdmi    20480  1
+amdxdna               282624  0
+snd_hda_codec_hdmi     61440  1 snd_hda_codec_atihdmi
+snd_soc_core          458752  4 snd_sof,snd_soc_sdca,snd_acp_pcm,soundwire_amd
+mt7925e                28672  0
+snd_hda_intel          69632  2
+ac97_bus               12288  1 snd_soc_core
+mt7925_common         159744  1 mt7925e
+snd_pcm_dmaengine      20480  1 snd_soc_core
+snd_hda_codec         241664  6 snd_hda_codec_generic,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec_realtek_lib,snd_hda_codec_alc269,snd_hda_codec_atihdmi
+mt792x_lib             81920  2 mt7925e,mt7925_common
+hid_sensor_accel_3d    20480  0
+snd_hda_scodec_cs35l41_spi    12288  0
+snd_compress           32768  1 snd_soc_core
+snd_hda_core          167936  7 snd_hda_codec_generic,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec,snd_hda_codec_realtek_lib,snd_hda_codec_alc269,snd_hda_codec_atihdmi
+mt76_connac_lib       110592  3 mt792x_lib,mt7925e,mt7925_common
+hid_sensor_trigger     20480  1 hid_sensor_accel_3d
+kfifo_buf              16384  1 hid_sensor_trigger
+snd_acp_pci            12288  0
+kvm_amd               266240  0
+snd_intel_dspcfg       49152  2 snd_hda_intel,snd_sof
+hid_sensor_iio_common    20480  2 hid_sensor_trigger,hid_sensor_accel_3d
+mt76                  180224  4 mt792x_lib,mt7925e,mt76_connac_lib,mt7925_common
+snd_amd_acpi_mach      12288  1 snd_acp_pci
+snd_intel_sdw_acpi     16384  1 snd_intel_dspcfg
+snd_acp_legacy_common    24576  2 snd_acp70,snd_acp_pci
+uvcvideo              188416  0
+btusb                  81920  0
+kvm                  1560576  1 kvm_amd
+industrialio          151552  3 hid_sensor_trigger,kfifo_buf,hid_sensor_accel_3d
+hid_sensor_custom      28672  0
+snd_hda_scodec_cs35l41_i2c    12288  0
+ucsi_acpi              16384  0
+snd_hwdep              24576  1 snd_hda_codec
+asus_nb_wmi            32768  0
+snd_pci_acp6x          20480  0
+btmtk                  40960  1 btusb
+uvc                    12288  1 uvcvideo
+typec_ucsi             94208  1 ucsi_acpi
+btbcm                  24576  1 btusb
+mac80211             1896448  4 mt792x_lib,mt76,mt76_connac_lib,mt7925_common
+snd_hda_scodec_cs35l41    77824  2 snd_hda_scodec_cs35l41_i2c,snd_hda_scodec_cs35l41_spi
+irqbypass              16384  1 kvm
+snd_pci_acp5x          20480  0
+videobuf2_vmalloc      20480  1 uvcvideo
+roles                  16384  1 typec_ucsi
+snd_pcm               237568  16 snd_sof_amd_acp,snd_hda_codec_hdmi,snd_pci_acp6x,snd_acp_legacy_common,snd_hda_intel,snd_hda_codec,snd_sof,snd_soc_sdca,snd_compress,snd_soc_core,snd_acp_pcm,snd_sof_utils,soundwire_amd,snd_hda_core,snd_pci_ps,snd_pcm_dmaengine
+ov13b10                28672  0
+btintel                77824  1 btusb
+asus_armoury          118784  0
+snd_soc_cs_amp_lib     24576  1 snd_hda_scodec_cs35l41
+aesni_intel           102400  3
+videobuf2_memops       16384  1 videobuf2_vmalloc
+snd_rn_pci_acp3x       24576  0
+i2c_piix4              36864  0
+typec                 135168  1 typec_ucsi
+hid_sensor_hub         32768  4 hid_sensor_trigger,hid_sensor_iio_common,hid_sensor_accel_3d,hid_sensor_custom
+amd_pmf                86016  1 amdxdna
+btrtl                  32768  1 btusb
+v4l2_fwnode            40960  1 ov13b10
+snd_soc_cs35l41_lib    45056  3 snd_hda_scodec_cs35l41_i2c,snd_hda_scodec_cs35l41,snd_hda_scodec_cs35l41_spi
+snd_timer              57344  3 snd_seq,snd_hrtimer,snd_pcm
+videobuf2_v4l2         45056  1 uvcvideo
+gf128mul               16384  1 aesni_intel
+snd_acp_config         24576  11 snd_rn_pci_acp3x,snd_sof_amd_acp70,snd_pci_acp7x,snd_pci_acp6x,snd_pci_acp5x,snd_sof_amd_rembrandt,snd_sof_amd_vangogh,snd_sof_amd_acp63,snd_acp_pci,snd_pci_ps,snd_sof_amd_renoir
+gpio_keys              24576  0
+bluetooth            1187840  34 btrtl,btmtk,btintel,btbcm,bnep,btusb,rfcomm
+mousedev               28672  0
+joydev                 28672  0
+videobuf2_common       98304  4 videobuf2_vmalloc,videobuf2_v4l2,uvcvideo,videobuf2_memops
+firmware_attributes_class    12288  1 asus_armoury
+wmi_bmof               12288  0
+rapl                   20480  0
+pcspkr                 12288  0
+v4l2_async             32768  2 v4l2_fwnode,ov13b10
+amdtee                 32768  0
+cs_dsp                 98304  2 snd_hda_scodec_cs35l41,snd_soc_cs_amp_lib
+cfg80211             1622016  4 mt76,mac80211,mt76_connac_lib,mt7925_common
+snd                   163840  22 snd_hda_codec_generic,snd_seq,snd_seq_device,snd_hda_codec_hdmi,snd_hwdep,snd_hda_intel,snd_hda_codec,snd_sof,snd_hda_scodec_cs35l41,snd_soc_sdca,snd_timer,snd_hda_codec_realtek_lib,snd_compress,snd_hda_codec_alc269,snd_soc_core,snd_pcm
+videodev              438272  5 v4l2_async,v4l2_fwnode,videobuf2_v4l2,uvcvideo,ov13b10
+i2c_smbus              20480  1 i2c_piix4
+snd_soc_acpi           16384  5 snd_sof_amd_acp,snd_acp_legacy_common,snd_acp_config,snd_amd_acpi_mach,snd_pci_ps
+libarc4                12288  1 mac80211
+i2c_hid_acpi           12288  0
+k10temp                12288  0
+thunderbolt           630784  1 typec
+amd_sfh                61440  1 amd_pmf
+tee                    61440  2 amd_pmf,amdtee
+soundcore              16384  1 snd
+aead                   16384  3 ccm,mac80211,aesni_intel
+snd_pci_acp3x          20480  0
+ccp                   233472  2 kvm_amd,amdtee
+mc                     94208  6 v4l2_async,videodev,videobuf2_v4l2,uvcvideo,videobuf2_common,ov13b10
+amd_pmc                61440  0
+serial_multi_instantiate    20480  0
+soc_button_array       24576  0
+i2c_hid                49152  1 i2c_hid_acpi
+mac_hid                12288  0
+ip6t_REJECT            12288  1
+nf_reject_ipv6         20480  1 ip6t_REJECT
+xt_hl                  12288  22
+ip6t_rt                16384  3
+ipt_REJECT             12288  1
+nf_reject_ipv4         16384  1 ipt_REJECT
+xt_LOG                 16384  10
+nf_log_syslog          28672  10
+nft_limit              16384  13
+xt_limit               12288  0
+xt_addrtype            12288  4
+xt_tcpudp              20480  60
+xt_conntrack           12288  16
+nf_conntrack          212992  1 xt_conntrack
+nf_defrag_ipv6         24576  1 nf_conntrack
+nf_defrag_ipv4         12288  1 nf_conntrack
+nft_compat             20480  117
+x_tables               69632  10 xt_conntrack,nft_compat,xt_LOG,xt_tcpudp,xt_addrtype,ip6t_rt,ipt_REJECT,xt_limit,xt_hl,ip6t_REJECT
+nf_tables             409600  594 nft_compat,nft_limit
+dm_mod                233472  0
+pkcs8_key_parser       12288  0
+ntsync                 20480  0
+i2c_dev                24576  0
+crypto_user            12288  0
+zram                   77824  1
+842_decompress         16384  1 zram
+842_compress           24576  1 zram
+lz4hc_compress         24576  1 zram
+hid_asus               32768  0
+asus_wmi              118784  3 asus_armoury,asus_nb_wmi,hid_asus
+sparse_keymap          12288  1 asus_wmi
+nvme                   77824  2
+sdhci_pci             122880  0
+cqhci                  45056  1 sdhci_pci
+nvme_core             294912  3 nvme
+sdhci_uhs2             40960  1 sdhci_pci
+hid_multitouch         40960  0
+rfkill                 45056  8 mt7925e,asus_wmi,bluetooth,cfg80211
+sdhci                 110592  2 sdhci_uhs2,sdhci_pci
+nvme_keyring           20480  1 nvme_core
+mmc_core              315392  4 sdhci_uhs2,sdhci,cqhci,sdhci_pci
+nvme_auth              36864  1 nvme_core
+serio_raw              20480  0
+amdgpu              19042304  41
+drm_panel_backlight_quirks    12288  1 amdgpu
+drm_buddy              12288  1 amdgpu
+drm_suballoc_helper    24576  1 amdgpu
+video                  81920  3 asus_wmi,amdgpu,asus_nb_wmi
+wmi                    45056  4 video,asus_armoury,asus_wmi,wmi_bmof
+i2c_algo_bit           20480  1 amdgpu
+drm_exec               12288  1 amdgpu
+gpu_sched              77824  2 amdxdna,amdgpu
+amdxcp                 12288  1 amdgpu
+drm_ttm_helper         20480  1 amdgpu
+ttm                   159744  2 amdgpu,drm_ttm_helper
+drm_display_helper    307200  1 amdgpu
+cec                   106496  2 drm_display_helper,amdgpu
+---END file cmd/lsmod---
+---BEGIN file cmd/lspci-nn---
+00:00.0 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Root Complex [1022:1507] (rev 02)
+00:00.2 IOMMU [0806]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo IOMMU [1022:1508] (rev 02)
+00:01.0 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Dummy Host Bridge [1022:1509]
+00:01.1 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo PCIe USB4 Bridge [1022:150a] (rev 02)
+00:01.2 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo PCIe USB4 Bridge [1022:150a] (rev 02)
+00:02.0 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Dummy Host Bridge [1022:1509]
+00:02.2 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo GPP Bridge [1022:150b] (rev 02)
+00:02.3 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo GPP Bridge [1022:150b] (rev 02)
+00:02.5 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo GPP Bridge [1022:150b] (rev 02)
+00:03.0 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Dummy Host Bridge [1022:1509]
+00:08.0 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Dummy Host Bridge [1022:1509]
+00:08.1 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Internal GPP Bridge to Bus [C:A] [1022:150c]
+00:08.2 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Internal GPP Bridge to Bus [C:A] [1022:150c]
+00:08.3 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo Internal GPP Bridge to Bus [C:A] [1022:150c]
+00:14.0 SMBus [0c05]: Advanced Micro Devices, Inc. [AMD] FCH SMBus Controller [1022:790b] (rev 71)
+00:14.3 ISA bridge [0601]: Advanced Micro Devices, Inc. [AMD] FCH LPC Bridge [1022:790e] (rev 51)
+00:18.0 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 0 [1022:12b8]
+00:18.1 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 1 [1022:12b9]
+00:18.2 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 2 [1022:12ba]
+00:18.3 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 3 [1022:12bb]
+00:18.4 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 4 [1022:12bc]
+00:18.5 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 5 [1022:12bd]
+00:18.6 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 6 [1022:12be]
+00:18.7 Host bridge [0600]: Advanced Micro Devices, Inc. [AMD] Strix Halo Data Fabric; Function 7 [1022:12bf]
+c1:00.0 SD Host controller [0805]: Genesys Logic, Inc GL9755 SD Host Controller [17a0:9755] (rev 01)
+c2:00.0 Network controller [0280]: MEDIATEK Corp. MT7925 802.11be 160MHz 2x2 PCIe Wireless Network Adapter [Filogic 360] [14c3:7925]
+c3:00.0 Non-Volatile memory controller [0108]: Sandisk Corp WD PC SN5000S M.2 2230 NVMe SSD (DRAM-less) [15b7:5034]
+c4:00.0 Display controller [0380]: Advanced Micro Devices, Inc. [AMD/ATI] Strix Halo [Radeon Graphics / Radeon 8050S Graphics / Radeon 8060S Graphics] [1002:1586] (rev c1)
+c4:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Radeon High Definition Audio Controller [1002:1640]
+c4:00.2 Encryption controller [1080]: Advanced Micro Devices, Inc. [AMD] Strix/Krackan/Strix Halo CCP/ASP [1022:17e0]
+c4:00.4 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] Strix Halo USB 3.1 xHCI [1022:1587]
+c4:00.5 Multimedia controller [0480]: Advanced Micro Devices, Inc. [AMD] Audio Coprocessor [1022:15e2] (rev 70)
+c4:00.6 Audio device [0403]: Advanced Micro Devices, Inc. [AMD] Ryzen HD Audio Controller [1022:15e3]
+c4:00.7 Signal processing controller [1180]: Advanced Micro Devices, Inc. [AMD] Sensor Fusion Hub [1022:164a]
+c5:00.0 Non-Essential Instrumentation [1300]: Advanced Micro Devices, Inc. [AMD] Strix/Strix Halo PCIe Dummy Function [1022:150d]
+c5:00.1 Signal processing controller [1180]: Advanced Micro Devices, Inc. [AMD] Strix/Krackan/Strix Halo Neural Processing Unit [1022:17f0] (rev 11)
+c6:00.0 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] Strix Halo USB 3.1 xHCI [1022:1588]
+c6:00.3 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] Strix Halo USB 3.1 xHCI [1022:1589]
+c6:00.4 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] Strix Halo USB 3.1 xHCI [1022:158b]
+c6:00.5 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] Strix Halo USB4 Host Router [1022:158d]
+c6:00.6 USB controller [0c03]: Advanced Micro Devices, Inc. [AMD] Strix Halo USB4 Host Router [1022:158e]
+---END file cmd/lspci-nn---
+---BEGIN file cmd/lspci-vnn-audio---
+c4:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Radeon High Definition Audio Controller [1002:1640] (prog-if 00 [HDA compatible])
+	Subsystem: Advanced Micro Devices, Inc. [AMD/ATI] Radeon High Definition Audio Controller [1002:1640]
+	Flags: bus master, fast devsel, latency 0, IRQ 140, IOMMU group 19
+	Memory at a0448000 (32-bit, non-prefetchable) [size=16K]
+	Capabilities: <access denied>
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_hda_intel
+
+c4:00.6 Audio device [0403]: Advanced Micro Devices, Inc. [AMD] Ryzen HD Audio Controller [1022:15e3] (prog-if 00 [HDA compatible])
+	Subsystem: ASUSTeK Computer Inc. Device [1043:1fb3]
+	Flags: bus master, fast devsel, latency 0, IRQ 141, IOMMU group 23
+	Memory at a0440000 (32-bit, non-prefetchable) [size=32K]
+	Capabilities: <access denied>
+	Kernel driver in use: snd_hda_intel
+	Kernel modules: snd_hda_intel
+---END file cmd/lspci-vnn-audio---
+---BEGIN file cmd/lsusb---
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 002: ID 636e:0bda Shinetech ASUS 5M webcam
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 003 Device 002: ID 13d3:3608 IMC Networks Wireless_Device
+Bus 003 Device 003: ID 0b05:1a30 ASUSTek Computer, Inc. GZ302EA-Keyboard
+Bus 003 Device 004: ID 0b05:18c6 ASUSTek Computer, Inc. N-KEY Device
+Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 005 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 006 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 007 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 008 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+---END file cmd/lsusb---
+---BEGIN file cmd/modinfo-n/.gitkeep---
+---END file cmd/modinfo-n/.gitkeep---
+---BEGIN file cmd/modinfo-n/amdgpu---
+/lib/modules/7.2.2-1-cachyos/kernel/drivers/gpu/drm/amd/amdgpu/amdgpu.ko.zst
+---END file cmd/modinfo-n/amdgpu---
+---BEGIN file cmd/modinfo-n/asus_wmi---
+/lib/modules/7.2.2-1-cachyos/kernel/drivers/platform/x86/asus-wmi.ko.zst
+---END file cmd/modinfo-n/asus_wmi---
+---BEGIN file cmd/modinfo-n/ext4---
+(builtin)
+---END file cmd/modinfo-n/ext4---
+---BEGIN file cmd/modinfo-n/hid_asus---
+/lib/modules/7.2.2-1-cachyos/kernel/drivers/hid/hid-asus.ko.zst
+---END file cmd/modinfo-n/hid_asus---
+---BEGIN file cmd/modinfo-n/i2c_hid_acpi---
+/lib/modules/7.2.2-1-cachyos/kernel/drivers/hid/i2c-hid/i2c-hid-acpi.ko.zst
+---END file cmd/modinfo-n/i2c_hid_acpi---
+---BEGIN file cmd/modinfo-n/mt7921e---
+/lib/modules/7.2.2-1-cachyos/kernel/drivers/net/wireless/mediatek/mt76/mt7921/mt7921e.ko.zst
+---END file cmd/modinfo-n/mt7921e---
+---BEGIN file cmd/modinfo-n/mt7925e---
+/lib/modules/7.2.2-1-cachyos/kernel/drivers/net/wireless/mediatek/mt76/mt7925/mt7925e.ko.zst
+---END file cmd/modinfo-n/mt7925e---
+---BEGIN file cmd/modinfo-n/snd_hda_intel---
+/lib/modules/7.2.2-1-cachyos/kernel/sound/hda/controllers/snd-hda-intel.ko.zst
+---END file cmd/modinfo-n/snd_hda_intel---
+---BEGIN file cmd/modinfo-n/snd_hda_scodec_cs35l41_i2c---
+/lib/modules/7.2.2-1-cachyos/kernel/sound/hda/codecs/side-codecs/snd-hda-scodec-cs35l41-i2c.ko.zst
+---END file cmd/modinfo-n/snd_hda_scodec_cs35l41_i2c---
+---BEGIN file cmd/modinfo-n/snd_hda_scodec_cs35l41_spi---
+/lib/modules/7.2.2-1-cachyos/kernel/sound/hda/codecs/side-codecs/snd-hda-scodec-cs35l41-spi.ko.zst
+---END file cmd/modinfo-n/snd_hda_scodec_cs35l41_spi---
+---BEGIN file cmd/modinfo-parm/.gitkeep---
+---END file cmd/modinfo-parm/.gitkeep---
+---BEGIN file cmd/modinfo-parm/amdgpu---
+ptl:Enable PTL (-1 = auto, 0 = disable (default), 1 = enable, 2 = permanently disable) (int)
+hdmi_hpd_debounce_delay_ms:HDMI HPD disconnect debounce delay in milliseconds (0 to disable (by default), 1500 is common) (uint)
+user_queue:Enable user queues (-1 = auto (default), 0 = disable, 1 = enable, 2 = enable UQs and disable KQs) (int)
+rebar:Resizable BAR (-1 = auto (default), 0 = disable, 1 = enable) (int)
+wbrf:Enable Wifi RFI interference mitigation (0 = disabled, 1 = enabled, -1 = auto(default) (int)
+agp:AGP (-1 = auto (default), 0 = disable, 1 = enable) (int)
+debug_mask:debug options for amdgpu, disabled by default (uint)
+seamless:Seamless boot (-1 = auto (default), 0 = disable, 1 = enable) (int)
+modeset:Override nomodeset (1 = enable, -1 = auto) (int)
+enforce_isolation:enforce process isolation between graphics and compute. (-1 = auto, 0 = disable, 1 = enable, 2 = enable legacy mode, 3 = enable without cleaner shader) (int)
+user_partt_mode:specify partition mode to be used (-2 = AMDGPU_AUTO_COMPUTE_PARTITION_MODE(default value) 						0 = AMDGPU_SPX_PARTITION_MODE, 						1 = AMDGPU_DPX_PARTITION_MODE, 						2 = AMDGPU_TPX_PARTITION_MODE, 						3 = AMDGPU_QPX_PARTITION_MODE, 						4 = AMDGPU_CPX_PARTITION_MODE) (uint)
+smu_pptable_id:specify pptable id to be used (-1 = auto(default) value, 0 = use pptable from vbios, > 0 = soft pptable id) (int)
+umsch_mm_fwlog:Enable umschfw log(0 = disable (default value), 1 = enable) (int)
+umsch_mm:Enable Multi Media User Mode Scheduler (0 = disabled (default), 1 = enabled) (int)
+sg_display:S/G Display (-1 = auto (default), 0 = disable) (int)
+vcnfw_log:Enable vcnfw log(0 = disable (default value), 1 = enable) (int)
+num_kcq:number of kernel compute queue user want to setup (8 if set to greater than 8 or less than 0, only affect gfx 8+) (int)
+bad_page_threshold:Bad page threshold(-1 = ignore threshold (default value), 0 = disable bad page retirement, -2 = threshold determined by a formula, 0 < threshold < max records, user-defined threshold) (int)
+reset_method:GPU reset method (-1 = auto (default), 0 = legacy, 1 = mode0, 2 = mode1, 3 = mode2, 4 = baco/bamaco) (int)
+freesync_video:Adds additional modes via VRR for refresh changes without a full modeset (0 = off (default), 1 = on) (uint)
+tmz:Enable TMZ feature (-1 = auto (default), 0 = off, 1 = on) (int)
+damageclips:Damage clips support (0 = disable, 1 = enable, -1 auto (default)) (int)
+backlight:Backlight control (0 = pwm, 1 = aux, -1 auto (default)) (bint)
+abmlevel:ABM level (0 = off, 1-4 = backlight reduction level, -1 auto (default)) (int)
+visualconfirm:Visual confirm (0 = off (default), 1 = MPO, 5 = PSR) (uint)
+dcdebugmask:all debug options disabled (default)) (uint)
+dcfeaturemask:all stable DC features enabled (default)) (uint)
+pcie_p2p:Enable PCIe P2P (requires large-BAR). (N = off, Y = on(default)) (bool)
+mtype_local:MTYPE for local memory (default: ASIC dependent, 0 = MTYPE_RW, 1 = MTYPE_NC, 2 = MTYPE_CC) (int)
+no_queue_eviction_on_vm_fault:No queue eviction on VM fault (0 = queue eviction, 1 = no queue eviction) (int)
+no_system_mem_limit:disable system memory limit (false = default) (bool)
+debug_evictions:enable eviction debug messages (false = default) (bool)
+queue_preemption_timeout_ms:queue preemption timeout in ms (1 = Minimum, 9000 = default) (int)
+hws_gws_support:Assume MEC2 FW supports GWS barriers (false = rely on FW version check (Default), true = force supported) (bool)
+halt_if_hws_hang:Halt if HWS hang is detected (0 = off (default), 1 = on) (int)
+send_sigterm:Send sigterm to HSA process on unhandled exception (0 = disable, 1 = enable) (int)
+max_num_of_queues_per_device:Maximum number of supported queues per device (1 = Minimum, 4096 = default) (int)
+cwsr_enable:CWSR enable (0 = Off, 1 = On (Default)) (int)
+hws_max_conc_proc:Max # processes HWS can execute concurrently when sched_policy=0 (0 = no concurrency, #VMIDs for KFD = Maximum(default)) (int)
+sched_policy:Scheduling policy (0 = HWS (Default), 1 = HWS without over-subscription, 2 = Non-HWS (Used for debugging only) (int)
+use_xgmi_p2p:Enable XGMI P2P interface (0 = disable; 1 = enable (default)) (int)
+force_asic_type:A non negative value used to specify the asic type for all supported GPUs (int)
+noretry:Disable retry faults (0 = retry enabled, 1 = retry disabled, -1 auto (default)) (int)
+uni_mes:Enable Unified Micro Engine Scheduler (0 = disabled, 1 = enabled(default) (int)
+mes_log_enable:Enable Micro Engine Scheduler log (0 = disabled (default), 1 = enabled) (int)
+discovery:Allow driver to discover hardware IPs from IP Discovery table at the top of VRAM (int)
+mcbp:Enable Mid-command buffer preemption (0 = disabled, 1 = enabled), -1 = auto (default) (int)
+async_gfx_ring:Asynchronous GFX rings that could be configured with either different priorities (HP3D ring and LP3D ring), or equal priorities (0 = disabled, 1 = enabled (default)) (int)
+smu_memory_pool_size:reserve gtt for smu debug usage, 0 = disable,0x1 = 256Mbyte, 0x2 = 512Mbyte, 0x4 = 1 Gbyte, 0x8 = 2GByte (uint)
+cik_support:CIK support  (1 = enabled, 0 = disabled, -1 = default) (int)
+si_support:SI support (1 = enabled, 0 = disabled, -1 = default) (int)
+timeout_period:watchdog timeout period (0 = timeout disabled, 1 ~ 0x23 = timeout maxcycles = (1 << period) (uint)
+timeout_fatal_disable:disable watchdog timeout fatal error (false = default) (bool)
+ras_mask:Mask of RAS features to enable (default 0xffffffff), only valid when ras_enable == 1 (uint)
+ras_enable:Enable RAS features on the GPU (0 = disable, 1 = enable, -1 = auto (default)) (int)
+emu_mode:Emulation mode, (1 = enable, 0 = disable) (int)
+gpu_recovery:Enable GPU recovery mechanism, (1 = enable, 0 = disable, -1 = auto) (int)
+compute_multipipe:Force compute queues to be spread across pipes (1 = enable, 0 = disable, -1 = auto) (int)
+lbpw:Load Balancing Per Watt (LBPW) support (1 = enable, 0 = disable, -1 = auto) (int)
+virtual_display:Enable virtual display feature (the virtual_display will be set like xxxx:xx:xx.x,x;xxxx:xx:xx.x,x) (charp)
+disable_cu:Disable CUs (se.sh.cu,...) (charp)
+sdma_phase_quantum:SDMA context switch phase quantum (x 1K GPU clock cycles, 0 = no change (default 32)) (uint)
+pg_mask:Powergating flags mask (0 = disable power gating) (uint)
+cg_mask:Clockgating flags mask (0 = disable clock gating) (ullong)
+pcie_lane_cap:PCIE Lane Caps (0: autodetect (default)) (uint)
+pcie_gen_cap:PCIE Gen Caps (0: autodetect (default)) (uint)
+forcelongtraining:force memory long training (uint)
+ppfeaturemask:all power features enabled (default)) (hexint)
+sched_hw_submission:the max number of HW submissions (default 2) (int)
+sched_jobs:the max number of jobs supported in the sw queue (default 32) (int)
+dc:Display Core driver (1 = enable, 0 = disable, -1 = auto (default)) (int)
+exp_hw_support:experimental hw support (1 = enable, 0 = disable (default)) (int)
+vm_update_mode:VM update using CPU (0 = never (default except for large BAR(LB)), 1 = Graphics only, 2 = Compute only (default for LB), 3 = Both (int)
+vm_fault_stop:Stop on VM fault (0 = never (default), 1 = print first, 2 = always) (int)
+vm_block_size:VM page table size in bits (default depending on vm_size) (int)
+vm_fragment_size:VM fragment size in bits (4, 5, etc. 4 = 64K (default), Max 9 = 2M) (int)
+vm_size:VM address space size in gigabytes (default 64GB) (int)
+deep_color:Deep Color support (1 = enable, 0 = disable (default)) (int)
+bapm:BAPM support (1 = enable, 0 = disable, -1 = auto) (int)
+ip_block_mask:IP Block Mask (all blocks enabled (default)) (uint)
+runpm:PX runtime pm (2 = force enable with BAMACO, 1 = force enable with BACO, 0 = disable, -1 = auto, -2 = auto with displays) (int)
+aspm:ASPM support (1 = enable, 0 = disable, -1 = auto) (int)
+fw_load_type:firmware loading type (3 = rlc backdoor autoload if supported, 2 = smu load if supported, 1 = psp load, 0 = force direct if supported, -1 = auto) (int)
+dpm:DPM support (1 = enable, 0 = disable, -1 = auto) (int)
+lockup_timeout:GPU lockup timeout in ms (default: 2000. 0: keep default value. negative: infinity timeout), format: [single value for all] or [GFX,Compute,SDMA,Video]. (string)
+svm_default_granularity:SVM's default granularity in log(2^Pages), default 9 = 2^9 = 2 MiB (uint)
+msi:MSI support (1 = enable, 0 = disable, -1 = auto) (int)
+pcie_gen2:PCIE Gen2 mode (-1 = auto, 0 = disable, 1 = enable) (int)
+hw_i2c:hw i2c engine enable (0 = disable) (int)
+disp_priority:Display Priority (0 = auto, 1 = normal, 2 = high) (int)
+audio:HDMI/DP Audio enable for non DC displays (-1 = auto, 0 = disable, 1 = enable) (int)
+moverate:Maximum buffer migration rate in MB/s. (32, 64, etc., -1=auto, 0=1=disabled) (int)
+gttsize:Size of the GTT userspace domain in megabytes (-1 = auto) (int)
+gartsize:Size of kernel GART to setup in megabytes (32, 64, etc., -1=auto) (uint)
+vis_vramlimit:Restrict visible VRAM for testing, in megabytes (int)
+vramlimit:Restrict VRAM for testing, in megabytes (int)
+ignore_min_pcap:Ignore the minimum power cap (int)
+---END file cmd/modinfo-parm/amdgpu---
+---BEGIN file cmd/modinfo-parm/asus_wmi---
+fnlock_default: (bool)
+---END file cmd/modinfo-parm/asus_wmi---
+---BEGIN file cmd/modinfo-parm/ext4---
+---END file cmd/modinfo-parm/ext4---
+---BEGIN file cmd/modinfo-parm/hid_asus---
+---END file cmd/modinfo-parm/hid_asus---
+---BEGIN file cmd/modinfo-parm/i2c_hid_acpi---
+---END file cmd/modinfo-parm/i2c_hid_acpi---
+---BEGIN file cmd/modinfo-parm/mt7921e---
+disable_aspm:disable PCI ASPM support (bool)
+---END file cmd/modinfo-parm/mt7921e---
+---BEGIN file cmd/modinfo-parm/mt7925e---
+disable_aspm:disable PCI ASPM support (bool)
+---END file cmd/modinfo-parm/mt7925e---
+---BEGIN file cmd/modinfo-parm/snd_hda_intel---
+snoop:Enable/disable snooping (bint)
+align_buffer_size:Force buffer and period sizes to be multiple of 128 bytes. (bint)
+power_save_controller:Reset controller in power save mode. (bool)
+pm_blacklist:Enable power-management denylist (bint)
+power_save:Automatic power-saving timeout (in second, 0 = disable). (xint)
+ctl_dev_id:Use control device identifier (based on codec address). (bool)
+dmic_detect:Allow DSP driver selection (bypass this driver) (0=off, 1=on) (default=1); deprecated, use snd-intel-dspcfg.dsp_driver option instead (bool)
+beep_mode:Select HDA Beep registration mode (0=off, 1=on) (default=1). (array of bool)
+patch:Patch file for Intel HD audio interface. (array of charp)
+enable_msi:Enable Message Signaled Interrupt (MSI) (bint)
+single_cmd:Use single command to communicate with codecs (for debugging only). (bint)
+jackpoll_ms:Ms between polling for jack events (default = 0, using unsol events only) (array of int)
+probe_only:Only probing and no codec initialization. (array of int)
+probe_mask:Bitmask to probe codecs (default = -1). (array of int)
+bdl_pos_adj:BDL position adjustment offset. (array of int)
+position_fix:DMA pointer read method.(-1 = system default, 0 = auto, 1 = LPIB, 2 = POSBUF, 3 = VIACOMBO, 4 = COMBO, 5 = SKL+, 6 = FIFO). (array of int)
+model:Use the given board model. (array of charp)
+enable:Enable Intel HD audio interface. (array of bool)
+id:ID string for Intel HD audio interface. (array of charp)
+index:Index value for Intel HD audio interface. (array of int)
+---END file cmd/modinfo-parm/snd_hda_intel---
+---BEGIN file cmd/modinfo-parm/snd_hda_scodec_cs35l41_i2c---
+---END file cmd/modinfo-parm/snd_hda_scodec_cs35l41_i2c---
+---BEGIN file cmd/modinfo-parm/snd_hda_scodec_cs35l41_spi---
+---END file cmd/modinfo-parm/snd_hda_scodec_cs35l41_spi---
+---BEGIN file cmd/modprobe-c---
+blacklist airspy
+blacklist nfc
+blacklist pn533
+blacklist pn533_usb
+blacklist iTCO_wdt
+blacklist sp5100_tco
+blacklist hackrf
+blacklist dvb_usb_rtl28xxu
+blacklist e4000
+blacklist rtl2832
+options amdgpu ppfeaturemask=0xffff7fff
+options amdgpu abmlevel=0
+options amdgpu sg_display=0
+options amdgpu cwsr_enable=0
+options btusb reset=1
+options hid_asus fnlock_default=0
+options i2c_hid_acpi quirks=0x01
+options nvidia NVreg_InitializeSystemMemoryAllocations=0     NVreg_DynamicPowerManagement=0x02
+options bonding max_bonds=0
+options dummy numdummies=0
+options ifb numifbs=0
+options amdgpu dcdebugmask=0x600
+softdep cifs 
+softdep cifs 
+softdep cifs 
+softdep cifs 
+softdep cifs 
+softdep ksmbd pre: nls
+softdep ksmbd pre: aes
+softdep ksmbd pre: aead2
+softdep ksmbd pre: ccm
+softdep ksmbd pre: gcm
+softdep lrw pre: ecb
+softdep irq_madera pre: madera
+softdep gpio_madera pre: pinctrl-madera
+softdep simatic_ipc_leds_gpio_core pre: platform:leds-gpio
+softdep simatic_ipc_leds_gpio_apollolake pre: simatic-ipc-leds-gpio-core platform:apollolake-pinctrl
+softdep simatic_ipc_leds_gpio_f7188x pre: simatic-ipc-leds-gpio-core gpio_f7188x
+softdep simatic_ipc_leds_gpio_elkhartlake pre: simatic-ipc-leds-gpio-core platform:elkhartlake-pinctrl
+softdep ipmi_msghandler post: ipmi_devintf
+softdep arizona_i2c pre: arizona_ldo1
+softdep arizona_spi pre: arizona_ldo1
+softdep wm8994 pre: wm8994_regulator
+softdep intel_lpss pre: platform:idma64
+softdep cxl_acpi pre: cxl_port
+softdep csiostor pre: cxgb4
+softdep spi_pxa2xx_platform pre: dw_dmac
+softdep genet pre: mdio-bcm-unimac
+softdep r8169 pre: realtek
+softdep ohci_platform pre: ehci_platform
+softdep mgb4 pre: platform:xiic-i2c platform:xilinx_spi spi-nor
+softdep max31760 pre: regmap_i2c
+softdep ufshcd_core pre: governor_simpleondemand
+softdep qat_4xxx pre: crypto-intel_qat
+softdep qat_420xx pre: crypto-intel_qat
+softdep qat_6xxx pre: crypto-intel_qat
+softdep hid_appletb_kbd pre: hid_appletb_bl
+softdep t2bce_core post: t2bce_vhci
+softdep t2bce_vhci pre: t2bce_core
+softdep t2bce_audio pre: t2bce_core
+softdep amd_pmf pre: amdtee
+softdep intel_atomisp2_led pre: asus_nb_wmi
+softdep intel_skl_int3472_tps68470 pre: clk-tps68470 tps68470-regulator
+softdep pcengines_apuv2 pre: platform:gpio_amd_fch platform:leds-gpio platform:gpio_keys_polled
+softdep simatic_ipc_batt_apollolake pre: simatic-ipc-batt platform:apollolake-pinctrl
+softdep simatic_ipc_batt_elkhartlake pre: simatic-ipc-batt platform:elkhartlake-pinctrl
+softdep simatic_ipc_batt_f7188x pre: simatic-ipc-batt gpio_f7188x platform:elkhartlake-pinctrl platform:alderlake-pinctrl
+softdep sel3350_platform pre: pinctrl_broxton leds-gpio
+softdep vfio post: vfio_iommu_type1 vfio_iommu_spapr_tce
+softdep act_mpls post: mpls_gso
+softdep xt_LOG pre: nf_log_syslog
+softdep xt_NFLOG pre: nfnetlink_log
+softdep xt_TRACE pre: nf_log_syslog
+softdep mpls_iptunnel post: mpls_gso
+---END file cmd/modprobe-c---
+---BEGIN file cmd/systemctl-units---
+alsa-restore.service is-enabled static
+alsa-restore.service is-active active
+alsa-state.service is-enabled static
+alsa-state.service is-active inactive
+reload-hid_asus.service is-enabled not-found
+reload-hid_asus.service is-active inactive
+gz302-tablet.service is-enabled not-found
+gz302-tablet.service is-active inactive
+NetworkManager.service is-enabled enabled
+NetworkManager.service is-active active
+---END file cmd/systemctl-units---
+---BEGIN file cmd/udev-input/.gitkeep---
+---END file cmd/udev-input/.gitkeep---
+---BEGIN file cmd/udev-input/event0---
+DEVPATH=/devices/pci0000:00/0000:00:14.3/PNP0C09:00/PNP0C0D:00/input/input0/event0
+DEVNAME=/dev/input/event0
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=platform
+ID_PATH=pci-0000:00:14.3-platform-PNP0C0D:00
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event0---
+---BEGIN file cmd/udev-input/event1---
+DEVPATH=/devices/platform/PNP0C0C:00/input/input1/event1
+DEVNAME=/dev/input/event1
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=platform
+ID_PATH=platform-PNP0C0C:00
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event1---
+---BEGIN file cmd/udev-input/event10---
+DEVPATH=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.3/0003:0B05:1A30.0004/input/input16/event10
+DEVNAME=/dev/input/event10
+SUBSYSTEM=input
+KEYBOARD_KEY_70072=insert
+ID_INPUT=1
+ID_INPUT_MOUSE=1
+ID_BUS=usb
+ID_MODEL_ID=1a30
+ID_VENDOR_ID=0b05
+ID_TYPE=hid
+ID_PATH=pci-0000:c6:00.0-usb-0:4:1.3
+ID_INTEGRATION=external
+TAGS=:uaccess:
+CURRENT_TAGS=:uaccess:
+---END file cmd/udev-input/event10---
+---BEGIN file cmd/udev-input/event11---
+DEVPATH=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.3/0003:0B05:1A30.0004/input/input17/event11
+DEVNAME=/dev/input/event11
+SUBSYSTEM=input
+KEYBOARD_KEY_70072=insert
+ID_INPUT=1
+ID_INPUT_TOUCHPAD=1
+ID_INPUT_WIDTH_MM=126
+ID_INPUT_HEIGHT_MM=70
+ID_BUS=usb
+ID_MODEL_ID=1a30
+ID_VENDOR_ID=0b05
+ID_TYPE=hid
+ID_PATH=pci-0000:c6:00.0-usb-0:4:1.3
+ID_INTEGRATION=external
+ID_INPUT_TOUCHPAD_INTEGRATION=external
+TAGS=:uaccess:
+CURRENT_TAGS=:uaccess:
+---END file cmd/udev-input/event11---
+---BEGIN file cmd/udev-input/event12---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input24/event12
+DEVNAME=/dev/input/event12
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event12---
+---BEGIN file cmd/udev-input/event13---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input25/event13
+DEVNAME=/dev/input/event13
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_TABLET=1
+ID_INPUT_WIDTH_MM=288
+ID_INPUT_HEIGHT_MM=180
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event13---
+---BEGIN file cmd/udev-input/event14---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input27/event14
+DEVNAME=/dev/input/event14
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event14---
+---BEGIN file cmd/udev-input/event15---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input28/event15
+DEVNAME=/dev/input/event15
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event15---
+---BEGIN file cmd/udev-input/event16---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input29/event16
+DEVNAME=/dev/input/event16
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event16---
+---BEGIN file cmd/udev-input/event17---
+DEVPATH=/devices/platform/ACPI0011:00/gpio-keys.1.auto/input/input31/event17
+DEVNAME=/dev/input/event17
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=platform
+ID_PATH=platform-gpio-keys.1.auto
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event17---
+---BEGIN file cmd/udev-input/event18---
+DEVPATH=/devices/platform/asus-nb-wmi/input/input32/event18
+DEVNAME=/dev/input/event18
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_INPUT_SWITCH=1
+ID_BUS=platform
+ID_PATH=platform-asus-nb-wmi
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event18---
+---BEGIN file cmd/udev-input/event19---
+DEVPATH=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input33/event19
+DEVNAME=/dev/input/event19
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=pci
+ID_PATH=pci-0000:c4:00.1
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event19---
+---BEGIN file cmd/udev-input/event2---
+DEVPATH=/devices/platform/i8042/serio0/input/input2/event2
+DEVNAME=/dev/input/event2
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_INPUT_KEYBOARD=1
+ID_BUS=i8042
+ID_PATH=platform-i8042-serio-0
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event2---
+---BEGIN file cmd/udev-input/event20---
+DEVPATH=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input34/event20
+DEVNAME=/dev/input/event20
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=pci
+ID_PATH=pci-0000:c4:00.1
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event20---
+---BEGIN file cmd/udev-input/event21---
+DEVPATH=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input35/event21
+DEVNAME=/dev/input/event21
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=pci
+ID_PATH=pci-0000:c4:00.1
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event21---
+---BEGIN file cmd/udev-input/event22---
+DEVPATH=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input36/event22
+DEVNAME=/dev/input/event22
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=pci
+ID_PATH=pci-0000:c4:00.1
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event22---
+---BEGIN file cmd/udev-input/event23---
+DEVPATH=/devices/pci0000:00/0000:00:08.1/0000:c4:00.6/sound/card1/input37/event23
+DEVNAME=/dev/input/event23
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_SWITCH=1
+ID_BUS=pci
+ID_PATH=pci-0000:c4:00.6
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event23---
+---BEGIN file cmd/udev-input/event3---
+DEVPATH=/devices/pci0000:00/0000:00:08.1/acpi.video_bus.0/input/input3/event3
+DEVNAME=/dev/input/event3
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=pci
+ID_PATH=pci-0000:00:08.1
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event3---
+---BEGIN file cmd/udev-input/event4---
+DEVPATH=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.0/0003:0B05:1A30.0001/input/input18/event4
+DEVNAME=/dev/input/event4
+SUBSYSTEM=input
+KEYBOARD_KEY_70072=insert
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=usb
+ID_MODEL_ID=1a30
+ID_VENDOR_ID=0b05
+ID_TYPE=hid
+ID_PATH=pci-0000:c6:00.0-usb-0:4:1.0
+ID_INTEGRATION=external
+TAGS=:uaccess:power-switch:
+CURRENT_TAGS=:uaccess:power-switch:
+---END file cmd/udev-input/event4---
+---BEGIN file cmd/udev-input/event5---
+DEVPATH=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.2/0003:0B05:1A30.0003/input/input19/event5
+DEVNAME=/dev/input/event5
+SUBSYSTEM=input
+KEYBOARD_KEY_70072=insert
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_INPUT_KEYBOARD=1
+ID_BUS=usb
+ID_MODEL_ID=1a30
+ID_VENDOR_ID=0b05
+ID_TYPE=hid
+ID_PATH=pci-0000:c6:00.0-usb-0:4:1.2
+ID_INTEGRATION=external
+TAGS=:uaccess:power-switch:
+CURRENT_TAGS=:uaccess:power-switch:
+---END file cmd/udev-input/event5---
+---BEGIN file cmd/udev-input/event6---
+DEVPATH=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-5/3-5:1.0/0003:0B05:18C6.0006/input/input20/event6
+DEVNAME=/dev/input/event6
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_KEY=1
+ID_BUS=usb
+ID_MODEL_ID=18c6
+ID_VENDOR_ID=0b05
+ID_TYPE=hid
+ID_PATH=pci-0000:c6:00.0-usb-0:5:1.0
+ID_INTEGRATION=internal
+TAGS=:power-switch:
+CURRENT_TAGS=:power-switch:
+---END file cmd/udev-input/event6---
+---BEGIN file cmd/udev-input/event7---
+DEVPATH=/devices/platform/pcspkr/input/input21/event7
+DEVNAME=/dev/input/event7
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=platform
+ID_PATH=platform-pcspkr
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event7---
+---BEGIN file cmd/udev-input/event8---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input22/event8
+DEVNAME=/dev/input/event8
+SUBSYSTEM=input
+ID_INPUT=1
+ID_INPUT_TOUCHSCREEN=1
+ID_INPUT_WIDTH_MM=284
+ID_INPUT_HEIGHT_MM=187
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event8---
+---BEGIN file cmd/udev-input/event9---
+DEVPATH=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input23/event9
+DEVNAME=/dev/input/event9
+SUBSYSTEM=input
+ID_INPUT=1
+ID_BUS=i2c
+ID_PATH=platform-AMDI0010:00
+ID_INTEGRATION=internal
+---END file cmd/udev-input/event9---
+---BEGIN file cmd/uname-r---
+7.2.2-1-cachyos
+---END file cmd/uname-r---
+---BEGIN file etc/default/limine---
+ESP_PATH="/boot"
+KERNEL_CMDLINE[default]+="quiet nowatchdog splash rw rootflags=subvol=/@ root=UUID=00000000-0000-0000-0000-000000000000 amd_pstate=guided amdgpu.dcdebugmask=0x600"
+BOOT_ORDER="*, *lts, *fallback, Snapshots"
+---END file etc/default/limine---
+---BEGIN file etc/modprobe.d/.gitkeep---
+---END file etc/modprobe.d/.gitkeep---
+---BEGIN file etc/modprobe.d/amdgpu.conf---
+# AMD GPU configuration for Radeon 8060S (RDNA 3.5, integrated)
+# Strix Halo specific: Phoenix/Navi33 equivalent
+# Enable all power features for better performance and efficiency
+# ROCm-compatible for AI/ML workloads
+# 0xffff7fff: all bits enabled except bit 15 (GFXOFF) — de-risks RDNA 3.5
+# GFXOFF causes hangs under rapid power-state transitions on Strix Halo iGPU.
+options amdgpu ppfeaturemask=0xffff7fff
+# abmlevel=0: disable Adaptive Backlight Management — not applicable/safe on OLED
+# (OLED panels report oled=1 in DPCD ext_caps; ABM is skipped by driver anyway)
+options amdgpu abmlevel=0
+# sg_display=0: disable scatter-gather display on this APU.
+# Kernel doc: "Set to 0 to disable if you experience flickering or other
+# issues under memory pressure" — directly applies to GZ302 OLED flicker.
+options amdgpu sg_display=0
+# cwsr_enable=0: disable Compute Wavefront Save-Restore.
+# Prevents GPU hangs and graphical artifacts on Strix Halo (RDNA 3.5)
+# caused by register file synchronization issues in early 2026 kernels.
+options amdgpu cwsr_enable=0
+---END file etc/modprobe.d/amdgpu.conf---
+---BEGIN file etc/modprobe.d/hid-asus.conf---
+# ASUS HID configuration for GZ302
+# fnlock_default=0: F1-F12 keys work as media keys by default
+# Kernel 6.15+ includes mature touchpad gesture support and improved ASUS HID integration
+options hid_asus fnlock_default=0
+---END file etc/modprobe.d/hid-asus.conf---
+---BEGIN file etc/modprobe.d/i2c-hid-acpi-gz302.conf---
+# ASUS GZ302 touchpad stability
+# Some units benefit from enabling i2c_hid_acpi quirk 0x01
+options i2c_hid_acpi quirks=0x01
+---END file etc/modprobe.d/i2c-hid-acpi-gz302.conf---
+---BEGIN file etc/udev/hwdb.d/.gitkeep---
+---END file etc/udev/hwdb.d/.gitkeep---
+---BEGIN file etc/udev/hwdb.d/90-gz302-remap.hwdb---
+# GZ302 Keyboard Remapping (Copilot -> Insert)
+# Detected Product ID: 1A30
+evdev:input:b0003v0B05p1A30*
+  KEYBOARD_KEY_70072=insert
+---END file etc/udev/hwdb.d/90-gz302-remap.hwdb---
+---BEGIN file etc/udev/rules.d/.gitkeep---
+---END file etc/udev/rules.d/.gitkeep---
+---BEGIN file etc/udev/rules.d/64-limesuite.rules---
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="8613", SYMLINK+="stream-%k", MODE="666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="04b4", ATTR{idProduct}=="00f1", SYMLINK+="stream-%k", MODE="666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="601f", SYMLINK+="stream-%k", MODE="666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6108", SYMLINK+="stream-%k", MODE="666"
+SUBSYSTEM=="xillybus", MODE="666"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", MODE="0666"
+---END file etc/udev/rules.d/64-limesuite.rules---
+---BEGIN file etc/udev/rules.d/99-gz302-keyboard.rules---
+# GZ302 Keyboard RGB Control - Allow unprivileged USB access
+# ASUS ROG Flow Z13 keyboard (USB 0b06.0.00)
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="1a30", TAG+="uaccess"
+---END file etc/udev/rules.d/99-gz302-keyboard.rules---
+---BEGIN file etc/udev/rules.d/99-z13ctl.rules---
+# 99-z13ctl.rules — ASUS ROG Flow Z13 device access
+#
+# Grants members of the users group read/write access to:
+#   - ASUS HID devices used for keyboard and lightbar RGB control
+#   - asus-wmi platform-profile attribute for performance profile control
+#   - asus-nb-wmi battery charge_control_end_threshold for battery limit control
+#   - Armoury Crate button input device for daemon button watcher
+#   - asus-armoury firmware-attributes (boot_sound, panel_overdrive)
+#   - hwmon fan curve attributes (asus_custom_fan_curve + asus pwm_enable)
+#   - asus-nb-wmi PPT power limit attributes for TDP control
+#
+# Generated by: z13ctl setup
+# To remove: sudo rm /etc/udev/rules.d/99-z13ctl.rules && sudo udevadm control --reload-rules
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18c6", MODE="0660", GROUP="users"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="1a30", MODE="0660", GROUP="users"
+ACTION=="add", SUBSYSTEM=="platform-profile", RUN+="/usr/bin/chgrp users /sys%p/profile", RUN+="/usr/bin/chmod g+w /sys%p/profile"
+ACTION=="add", SUBSYSTEM=="platform-profile", KERNELS=="asus-nb-wmi", RUN+="/usr/bin/chgrp users /sys/class/power_supply/BAT0/charge_control_end_threshold", RUN+="/usr/bin/chmod g+w /sys/class/power_supply/BAT0/charge_control_end_threshold"
+ACTION=="add", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="Asus WMI hotkeys", MODE="0660", GROUP="users"
+ACTION=="add", SUBSYSTEM=="firmware-attributes", KERNEL=="asus-armoury", RUN+="/usr/bin/chgrp users /sys/class/firmware-attributes/asus-armoury/attributes/boot_sound/current_value", RUN+="/usr/bin/chmod g+w /sys/class/firmware-attributes/asus-armoury/attributes/boot_sound/current_value"
+ACTION=="add", SUBSYSTEM=="firmware-attributes", KERNEL=="asus-armoury", RUN+="/usr/bin/chgrp users /sys/class/firmware-attributes/asus-armoury/attributes/panel_overdrive/current_value", RUN+="/usr/bin/chmod g+w /sys/class/firmware-attributes/asus-armoury/attributes/panel_overdrive/current_value"
+ACTION=="add", SUBSYSTEM=="hwmon", ATTR{name}=="asus_custom_fan_curve", RUN+="/bin/sh -c 'chgrp users /sys%p/pwm*; chmod g+w /sys%p/pwm*'"
+ACTION=="add", SUBSYSTEM=="hwmon", ATTR{name}=="asus", RUN+="/bin/sh -c 'for f in /sys%p/pwm*_enable; do [ -e \"$$f\" ] && chgrp users \"$$f\" && chmod g+w \"$$f\"; done'"
+ACTION=="add", SUBSYSTEM=="platform", KERNEL=="asus-nb-wmi", RUN+="/bin/sh -c 'for f in /sys/devices/platform/asus-nb-wmi/ppt_*; do [ -e \"$$f\" ] && chgrp users \"$$f\" && chmod g+w \"$$f\"; done'"
+---END file etc/udev/rules.d/99-z13ctl.rules---
+---BEGIN file expected---
+CAP_ASUS_WMI=true
+CAP_COMMAND_CENTER=true
+CAP_CS35L41=true
+CAP_DASHBOARD=true
+CAP_DETACHABLE_KB=true
+CAP_DETACHABLE_KB_MEASURED=true
+CAP_DETACHABLE_KB_SOURCE=measured
+CAP_INTERNAL_OLED=false
+CAP_MT7925=true
+CAP_ROCM=true
+CAP_STRIX_HALO=true
+CAP_Z13CTL=true
+DEVICE_CLASS=tablet
+DEVICE_MODEL=ROG Flow Z13 (GZ302)
+DEVICE_SUPPORT_TIER=full
+DEVICE_VENDOR=ASUS
+WIFI_HARDWARE_DETECTED=true
+WIFI_DRIVER=mt7925e
+GPU_DRM_CARD=card1
+GPU_DEVICE_ID=1002:1586
+INPUT_TOUCHPAD_DETECTED=true
+INPUT_KEYBOARD_DETECTED=true
+INPUT_TABLET_SWITCH=true
+AUDIO_CS35L41_DETECTED=true
+AUDIO_MODULE_LOADED=true
+AUDIO_SUBSYSTEM_ID=1043:1fb3
+# verify wifi.wifi_aspm_workaround_status=ABSENT
+# verify wifi.wifi_powersave_status=ABSENT
+# verify gpu.gpu_ppfeaturemask_status=LIVE
+# verify gpu.gpu_abmlevel_status=LIVE
+# verify gpu.gpu_sg_display_status=LIVE
+# verify gpu.gpu_cwsr_enable_status=LIVE
+# verify input.input_hid_config_status=REJECTED
+# verify input.input_i2c_quirk_status=REJECTED
+# verify input.input_keyboard_remap_status=LIVE
+# verify input.input_rgb_rule_status=LIVE
+# verify audio.audio_cs35l41_config_status=ABSENT
+# verify audio.audio_alsa_state_status=LIVE
+# verify display.display_psr_su_status=LIVE
+---END file expected---
+---BEGIN file proc/asound/cards---
+ 0 [Generic        ]: HDA-Intel - HD-Audio Generic
+                      HD-Audio Generic at 0xa0448000 irq 140
+ 1 [Generic_1      ]: HDA-Intel - HD-Audio Generic
+                      HD-Audio Generic at 0xa0440000 irq 141
+---END file proc/asound/cards---
+---BEGIN file proc/bus/input/devices---
+I: Bus=0019 Vendor=0000 Product=0005 Version=0000
+N: Name="Lid Switch"
+P: Phys=PNP0C0D/button/input0
+S: Sysfs=/devices/pci0000:00/0000:00:14.3/PNP0C09:00/PNP0C0D:00/input/input0
+U: Uniq=
+H: Handlers=event0 
+B: PROP=0
+B: EV=21
+B: SW=1
+
+I: Bus=0019 Vendor=0000 Product=0001 Version=0000
+N: Name="Power Button"
+P: Phys=PNP0C0C/button/input0
+S: Sysfs=/devices/platform/PNP0C0C:00/input/input1
+U: Uniq=
+H: Handlers=kbd event1 
+B: PROP=0
+B: EV=3
+B: KEY=8000 10000000000000 0
+
+I: Bus=0011 Vendor=0001 Product=0001 Version=ab83
+N: Name="AT Translated Set 2 keyboard"
+P: Phys=isa0060/serio0/input0
+S: Sysfs=/devices/platform/i8042/serio0/input/input2
+U: Uniq=
+H: Handlers=sysrq kbd leds event2 
+B: PROP=0
+B: EV=120013
+B: KEY=402000007 ff803078f800d001 feffffdfffcfffff fffffffffffffffe
+B: MSC=10
+B: LED=7
+
+I: Bus=0019 Vendor=0000 Product=0006 Version=0000
+N: Name="Video Bus"
+P: Phys=LNXVIDEO/video/input0
+S: Sysfs=/devices/pci0000:00/0000:00:08.1/acpi.video_bus.0/input/input3
+U: Uniq=
+H: Handlers=kbd event3 
+B: PROP=0
+B: EV=3
+B: KEY=3e000b00000000 0 0 0
+
+I: Bus=0003 Vendor=0b05 Product=1a30 Version=0110
+N: Name="ASUSTeK Computer Inc. GZ302EA-Keyboard Mouse"
+P: Phys=usb-0000:c6:00.0-4/input3
+S: Sysfs=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.3/0003:0B05:1A30.0004/input/input16
+U: Uniq=
+H: Handlers=event10 mouse0 
+B: PROP=0
+B: EV=17
+B: KEY=30000 0 0 0 0
+B: REL=1943
+B: MSC=10
+
+I: Bus=0003 Vendor=0b05 Product=1a30 Version=0110
+N: Name="ASUSTeK Computer Inc. GZ302EA-Keyboard Touchpad"
+P: Phys=usb-0000:c6:00.0-4/input3
+S: Sysfs=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.3/0003:0B05:1A30.0004/input/input17
+U: Uniq=
+H: Handlers=event11 mouse1 
+B: PROP=5
+B: EV=10001b
+B: KEY=e520 10000 0 0 0 0
+B: ABS=2e0800000000003
+B: MSC=20
+
+I: Bus=0003 Vendor=0b05 Product=1a30 Version=0110
+N: Name="ASUSTeK Computer Inc. GZ302EA-Keyboard"
+P: Phys=usb-0000:c6:00.0-4/input0
+S: Sysfs=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.0/0003:0B05:1A30.0001/input/input18
+U: Uniq=
+H: Handlers=kbd event4 rfkill 
+B: PROP=0
+B: EV=10001f
+B: KEY=733eff 0 20000 483ffff17aff32d bfd4444600000000 1 1b30c730b17cc00 9fa67bfad9715fed 9e168000004400 10000002
+B: REL=1040
+B: ABS=100000000
+B: MSC=10
+
+I: Bus=0003 Vendor=0b05 Product=1a30 Version=0110
+N: Name="ASUSTeK Computer Inc. GZ302EA-Keyboard"
+P: Phys=usb-0000:c6:00.0-4/input2
+S: Sysfs=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-4/3-4:1.2/0003:0B05:1A30.0003/input/input19
+U: Uniq=
+H: Handlers=sysrq kbd leds event5 
+B: PROP=0
+B: EV=120013
+B: KEY=1000000000007 ff9f207ac14057ff febeffdfffefffff fffffffffffffffe
+B: MSC=10
+B: LED=1f
+
+I: Bus=0003 Vendor=0b05 Product=18c6 Version=0110
+N: Name="ASUSTeK Computer Inc. N-KEY Device"
+P: Phys=usb-0000:c6:00.0-5/input0
+S: Sysfs=/devices/pci0000:00/0000:00:08.3/0000:c6:00.0/usb3/3-5/3-5:1.0/0003:0B05:18C6.0006/input/input20
+U: Uniq=
+H: Handlers=kbd event6 rfkill 
+B: PROP=0
+B: EV=10001f
+B: KEY=733eff 0 20000 483ffff17aff32d bfd4444600000000 1 1b30c730b17cc00 9fa67bfad9715fed 9e168000004400 10000002
+B: REL=1040
+B: ABS=100000000
+B: MSC=10
+
+I: Bus=0010 Vendor=001f Product=0001 Version=0100
+N: Name="PC Speaker"
+P: Phys=isa0061/input0
+S: Sysfs=/devices/platform/pcspkr/input/input21
+U: Uniq=
+H: Handlers=kbd event7 
+B: PROP=0
+B: EV=40001
+B: SND=6
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input22
+U: Uniq=
+H: Handlers=event8 mouse2 
+B: PROP=2
+B: EV=1b
+B: KEY=400 0 0 0 0 0
+B: ABS=3273800000000003
+B: MSC=20
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7 UNKNOWN"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input23
+U: Uniq=
+H: Handlers=event9 
+B: PROP=0
+B: EV=9
+B: ABS=10000000000
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7 UNKNOWN"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input24
+U: Uniq=
+H: Handlers=event12 
+B: PROP=0
+B: EV=100001
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7 Stylus"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input25
+U: Uniq=
+H: Handlers=event13 mouse3 
+B: PROP=2
+B: EV=1b
+B: KEY=1c03 0 0 0 0 0
+B: ABS=1000d000003
+B: MSC=10
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7 UNKNOWN"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input27
+U: Uniq=
+H: Handlers=event14 
+B: PROP=0
+B: EV=9
+B: ABS=10000000000
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7 UNKNOWN"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input28
+U: Uniq=
+H: Handlers=event15 
+B: PROP=0
+B: EV=9
+B: ABS=10000000000
+
+I: Bus=0018 Vendor=04f3 Product=43c7 Version=0100
+N: Name="ELAN9008:00 04F3:43C7 UNKNOWN"
+P: Phys=i2c-ELAN9008:00
+S: Sysfs=/devices/platform/AMDI0010:00/i2c-0/i2c-ELAN9008:00/0018:04F3:43C7.0008/input/input29
+U: Uniq=
+H: Handlers=event16 
+B: PROP=0
+B: EV=9
+B: ABS=10000000000
+
+I: Bus=0019 Vendor=0001 Product=0001 Version=0100
+N: Name="gpio-keys"
+P: Phys=gpio-keys/input0
+S: Sysfs=/devices/platform/ACPI0011:00/gpio-keys.1.auto/input/input31
+U: Uniq=
+H: Handlers=kbd event17 
+B: PROP=0
+B: EV=3
+B: KEY=10000000000000 0
+
+I: Bus=0019 Vendor=0000 Product=0000 Version=0000
+N: Name="Asus WMI hotkeys"
+P: Phys=asus-nb-wmi/input0
+S: Sysfs=/devices/platform/asus-nb-wmi/input/input32
+U: Uniq=
+H: Handlers=kbd event18 rfkill 
+B: PROP=0
+B: EV=100033
+B: KEY=400000000000000 10000000c0000 400400000 800000000000 0 0 181606f00900c00 380027801701000 e000000000000 0
+B: MSC=10
+B: SW=2
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HD-Audio Generic HDMI/DP,pcm=3"
+P: Phys=ALSA
+S: Sysfs=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input33
+U: Uniq=
+H: Handlers=event19 
+B: PROP=0
+B: EV=21
+B: SW=140
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HD-Audio Generic HDMI/DP,pcm=7"
+P: Phys=ALSA
+S: Sysfs=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input34
+U: Uniq=
+H: Handlers=event20 
+B: PROP=0
+B: EV=21
+B: SW=140
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HD-Audio Generic HDMI/DP,pcm=8"
+P: Phys=ALSA
+S: Sysfs=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input35
+U: Uniq=
+H: Handlers=event21 
+B: PROP=0
+B: EV=21
+B: SW=140
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HD-Audio Generic HDMI/DP,pcm=9"
+P: Phys=ALSA
+S: Sysfs=/devices/pci0000:00/0000:00:08.1/0000:c4:00.1/sound/card0/input36
+U: Uniq=
+H: Handlers=event22 
+B: PROP=0
+B: EV=21
+B: SW=140
+
+I: Bus=0000 Vendor=0000 Product=0000 Version=0000
+N: Name="HD-Audio Generic Headphone"
+P: Phys=ALSA
+S: Sysfs=/devices/pci0000:00/0000:00:08.1/0000:c4:00.6/sound/card1/input37
+U: Uniq=
+H: Handlers=event23 
+B: PROP=0
+B: EV=21
+B: SW=4
+---END file proc/bus/input/devices---
+---BEGIN file proc/cmdline---
+quiet nowatchdog splash rw rootflags=subvol=/@ root=UUID=00000000-0000-0000-0000-000000000000 amd_pstate=guided amdgpu.dcdebugmask=0x600
+---END file proc/cmdline---
+---BEGIN file proc/stat---
+btime 1788555295
+---END file proc/stat---
+---BEGIN file sys/bus/i2c/devices/.gitkeep---
+---END file sys/bus/i2c/devices/.gitkeep---
+---BEGIN file sys/bus/i2c/devices/i2c-0---
+---END file sys/bus/i2c/devices/i2c-0---
+---BEGIN file sys/bus/i2c/devices/i2c-1---
+---END file sys/bus/i2c/devices/i2c-1---
+---BEGIN file sys/bus/i2c/devices/i2c-10---
+---END file sys/bus/i2c/devices/i2c-10---
+---BEGIN file sys/bus/i2c/devices/i2c-11---
+---END file sys/bus/i2c/devices/i2c-11---
+---BEGIN file sys/bus/i2c/devices/i2c-12---
+---END file sys/bus/i2c/devices/i2c-12---
+---BEGIN file sys/bus/i2c/devices/i2c-13---
+---END file sys/bus/i2c/devices/i2c-13---
+---BEGIN file sys/bus/i2c/devices/i2c-14---
+---END file sys/bus/i2c/devices/i2c-14---
+---BEGIN file sys/bus/i2c/devices/i2c-15---
+---END file sys/bus/i2c/devices/i2c-15---
+---BEGIN file sys/bus/i2c/devices/i2c-16---
+---END file sys/bus/i2c/devices/i2c-16---
+---BEGIN file sys/bus/i2c/devices/i2c-17---
+---END file sys/bus/i2c/devices/i2c-17---
+---BEGIN file sys/bus/i2c/devices/i2c-18---
+---END file sys/bus/i2c/devices/i2c-18---
+---BEGIN file sys/bus/i2c/devices/i2c-19---
+---END file sys/bus/i2c/devices/i2c-19---
+---BEGIN file sys/bus/i2c/devices/i2c-2---
+---END file sys/bus/i2c/devices/i2c-2---
+---BEGIN file sys/bus/i2c/devices/i2c-20---
+---END file sys/bus/i2c/devices/i2c-20---
+---BEGIN file sys/bus/i2c/devices/i2c-21---
+---END file sys/bus/i2c/devices/i2c-21---
+---BEGIN file sys/bus/i2c/devices/i2c-22---
+---END file sys/bus/i2c/devices/i2c-22---
+---BEGIN file sys/bus/i2c/devices/i2c-23---
+---END file sys/bus/i2c/devices/i2c-23---
+---BEGIN file sys/bus/i2c/devices/i2c-3---
+---END file sys/bus/i2c/devices/i2c-3---
+---BEGIN file sys/bus/i2c/devices/i2c-4---
+---END file sys/bus/i2c/devices/i2c-4---
+---BEGIN file sys/bus/i2c/devices/i2c-5---
+---END file sys/bus/i2c/devices/i2c-5---
+---BEGIN file sys/bus/i2c/devices/i2c-6---
+---END file sys/bus/i2c/devices/i2c-6---
+---BEGIN file sys/bus/i2c/devices/i2c-7---
+---END file sys/bus/i2c/devices/i2c-7---
+---BEGIN file sys/bus/i2c/devices/i2c-8---
+---END file sys/bus/i2c/devices/i2c-8---
+---BEGIN file sys/bus/i2c/devices/i2c-9---
+---END file sys/bus/i2c/devices/i2c-9---
+---BEGIN file sys/bus/i2c/devices/i2c-CSC3551:00-cs35l41-hda.0---
+---END file sys/bus/i2c/devices/i2c-CSC3551:00-cs35l41-hda.0---
+---BEGIN file sys/bus/i2c/devices/i2c-CSC3551:00-cs35l41-hda.1---
+---END file sys/bus/i2c/devices/i2c-CSC3551:00-cs35l41-hda.1---
+---BEGIN file sys/bus/i2c/devices/i2c-ELAN9008:00---
+---END file sys/bus/i2c/devices/i2c-ELAN9008:00---
+---BEGIN file sys/bus/i2c/devices/i2c-ITE8353:00---
+---END file sys/bus/i2c/devices/i2c-ITE8353:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883509:00---
+---END file sys/bus/i2c/devices/i2c-PS883509:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88350A:00---
+---END file sys/bus/i2c/devices/i2c-PS88350A:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88350B:00---
+---END file sys/bus/i2c/devices/i2c-PS88350B:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88350C:00---
+---END file sys/bus/i2c/devices/i2c-PS88350C:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88350D:00---
+---END file sys/bus/i2c/devices/i2c-PS88350D:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88350E:00---
+---END file sys/bus/i2c/devices/i2c-PS88350E:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88350F:00---
+---END file sys/bus/i2c/devices/i2c-PS88350F:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883511:00---
+---END file sys/bus/i2c/devices/i2c-PS883511:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883512:00---
+---END file sys/bus/i2c/devices/i2c-PS883512:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883513:00---
+---END file sys/bus/i2c/devices/i2c-PS883513:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883514:00---
+---END file sys/bus/i2c/devices/i2c-PS883514:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883515:00---
+---END file sys/bus/i2c/devices/i2c-PS883515:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883516:00---
+---END file sys/bus/i2c/devices/i2c-PS883516:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883517:00---
+---END file sys/bus/i2c/devices/i2c-PS883517:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883519:00---
+---END file sys/bus/i2c/devices/i2c-PS883519:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88351A:00---
+---END file sys/bus/i2c/devices/i2c-PS88351A:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88351B:00---
+---END file sys/bus/i2c/devices/i2c-PS88351B:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88351C:00---
+---END file sys/bus/i2c/devices/i2c-PS88351C:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88351D:00---
+---END file sys/bus/i2c/devices/i2c-PS88351D:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88351E:00---
+---END file sys/bus/i2c/devices/i2c-PS88351E:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS88351F:00---
+---END file sys/bus/i2c/devices/i2c-PS88351F:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883521:00---
+---END file sys/bus/i2c/devices/i2c-PS883521:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883522:00---
+---END file sys/bus/i2c/devices/i2c-PS883522:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883523:00---
+---END file sys/bus/i2c/devices/i2c-PS883523:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883524:00---
+---END file sys/bus/i2c/devices/i2c-PS883524:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883525:00---
+---END file sys/bus/i2c/devices/i2c-PS883525:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883526:00---
+---END file sys/bus/i2c/devices/i2c-PS883526:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PS883527:00---
+---END file sys/bus/i2c/devices/i2c-PS883527:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PX883508:00---
+---END file sys/bus/i2c/devices/i2c-PX883508:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PX883510:00---
+---END file sys/bus/i2c/devices/i2c-PX883510:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PX883518:00---
+---END file sys/bus/i2c/devices/i2c-PX883518:00---
+---BEGIN file sys/bus/i2c/devices/i2c-PX883520:00---
+---END file sys/bus/i2c/devices/i2c-PX883520:00---
+---BEGIN file sys/bus/pci/devices/.gitkeep---
+---END file sys/bus/pci/devices/.gitkeep---
+---BEGIN file sys/bus/pci/devices/0000:00:00.0/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:1507
+PCI_SUBSYS_ID=1022:1507
+PCI_SLOT_NAME=0000:00:00.0
+MODALIAS=pci:v00001022d00001507sv00001022sd00001507bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:00.2/uevent---
+PCI_CLASS=80600
+PCI_ID=1022:1508
+PCI_SUBSYS_ID=1022:1508
+PCI_SLOT_NAME=0000:00:00.2
+MODALIAS=pci:v00001022d00001508sv00001022sd00001508bc08sc06i00
+---END file sys/bus/pci/devices/0000:00:00.2/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:01.0/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:1509
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:01.0
+MODALIAS=pci:v00001022d00001509sv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:01.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:01.1/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150A
+PCI_SUBSYS_ID=1022:150A
+PCI_SLOT_NAME=0000:00:01.1
+MODALIAS=pci:v00001022d0000150Asv00001022sd0000150Abc06sc04i00
+---END file sys/bus/pci/devices/0000:00:01.1/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:01.2/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150A
+PCI_SUBSYS_ID=1022:150A
+PCI_SLOT_NAME=0000:00:01.2
+MODALIAS=pci:v00001022d0000150Asv00001022sd0000150Abc06sc04i00
+---END file sys/bus/pci/devices/0000:00:01.2/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:02.0/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:1509
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:02.0
+MODALIAS=pci:v00001022d00001509sv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:02.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:02.2/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150B
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:00:02.2
+MODALIAS=pci:v00001022d0000150Bsv00001043sd00001FB3bc06sc04i00
+---END file sys/bus/pci/devices/0000:00:02.2/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:02.3/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150B
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:00:02.3
+MODALIAS=pci:v00001022d0000150Bsv00001043sd00001FB3bc06sc04i00
+---END file sys/bus/pci/devices/0000:00:02.3/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:02.5/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150B
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:00:02.5
+MODALIAS=pci:v00001022d0000150Bsv00001043sd00001FB3bc06sc04i00
+---END file sys/bus/pci/devices/0000:00:02.5/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:03.0/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:1509
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:03.0
+MODALIAS=pci:v00001022d00001509sv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:03.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:08.0/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:1509
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:08.0
+MODALIAS=pci:v00001022d00001509sv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:08.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:08.1/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150C
+PCI_SUBSYS_ID=1022:150C
+PCI_SLOT_NAME=0000:00:08.1
+MODALIAS=pci:v00001022d0000150Csv00001022sd0000150Cbc06sc04i00
+---END file sys/bus/pci/devices/0000:00:08.1/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:08.2/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150C
+PCI_SUBSYS_ID=1022:150C
+PCI_SLOT_NAME=0000:00:08.2
+MODALIAS=pci:v00001022d0000150Csv00001022sd0000150Cbc06sc04i00
+---END file sys/bus/pci/devices/0000:00:08.2/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:08.3/uevent---
+DRIVER=pcieport
+PCI_CLASS=60400
+PCI_ID=1022:150C
+PCI_SUBSYS_ID=1022:150C
+PCI_SLOT_NAME=0000:00:08.3
+MODALIAS=pci:v00001022d0000150Csv00001022sd0000150Cbc06sc04i00
+---END file sys/bus/pci/devices/0000:00:08.3/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:14.0/uevent---
+DRIVER=piix4_smbus
+PCI_CLASS=C0500
+PCI_ID=1022:790B
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:00:14.0
+MODALIAS=pci:v00001022d0000790Bsv00001043sd00001FB3bc0Csc05i00
+---END file sys/bus/pci/devices/0000:00:14.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:14.3/uevent---
+PCI_CLASS=60100
+PCI_ID=1022:790E
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:00:14.3
+MODALIAS=pci:v00001022d0000790Esv00001043sd00001FB3bc06sc01i00
+---END file sys/bus/pci/devices/0000:00:14.3/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.0/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12B8
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.0
+MODALIAS=pci:v00001022d000012B8sv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.1/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12B9
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.1
+MODALIAS=pci:v00001022d000012B9sv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.1/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.2/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12BA
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.2
+MODALIAS=pci:v00001022d000012BAsv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.2/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.3/uevent---
+DRIVER=k10temp
+PCI_CLASS=60000
+PCI_ID=1022:12BB
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.3
+MODALIAS=pci:v00001022d000012BBsv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.3/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.4/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12BC
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.4
+MODALIAS=pci:v00001022d000012BCsv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.4/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.5/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12BD
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.5
+MODALIAS=pci:v00001022d000012BDsv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.5/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.6/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12BE
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.6
+MODALIAS=pci:v00001022d000012BEsv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.6/uevent---
+---BEGIN file sys/bus/pci/devices/0000:00:18.7/uevent---
+PCI_CLASS=60000
+PCI_ID=1022:12BF
+PCI_SUBSYS_ID=0000:0000
+PCI_SLOT_NAME=0000:00:18.7
+MODALIAS=pci:v00001022d000012BFsv00000000sd00000000bc06sc00i00
+---END file sys/bus/pci/devices/0000:00:18.7/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c1:00.0/uevent---
+DRIVER=sdhci-pci
+PCI_CLASS=80501
+PCI_ID=17A0:9755
+PCI_SUBSYS_ID=1043:202F
+PCI_SLOT_NAME=0000:c1:00.0
+MODALIAS=pci:v000017A0d00009755sv00001043sd0000202Fbc08sc05i01
+---END file sys/bus/pci/devices/0000:c1:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c2:00.0/uevent---
+DRIVER=mt7925e
+PCI_CLASS=28000
+PCI_ID=14C3:7925
+PCI_SUBSYS_ID=1A3B:6370
+PCI_SLOT_NAME=0000:c2:00.0
+MODALIAS=pci:v000014C3d00007925sv00001A3Bsd00006370bc02sc80i00
+---END file sys/bus/pci/devices/0000:c2:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c3:00.0/uevent---
+DRIVER=nvme
+PCI_CLASS=10802
+PCI_ID=15B7:5034
+PCI_SUBSYS_ID=15B7:5034
+PCI_SLOT_NAME=0000:c3:00.0
+MODALIAS=pci:v000015B7d00005034sv000015B7sd00005034bc01sc08i02
+---END file sys/bus/pci/devices/0000:c3:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.0/uevent---
+DRIVER=amdgpu
+PCI_CLASS=38000
+PCI_ID=1002:1586
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:c4:00.0
+MODALIAS=pci:v00001002d00001586sv00001043sd00001FB3bc03sc80i00
+---END file sys/bus/pci/devices/0000:c4:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.1/uevent---
+DRIVER=snd_hda_intel
+PCI_CLASS=40300
+PCI_ID=1002:1640
+PCI_SUBSYS_ID=1002:1640
+PCI_SLOT_NAME=0000:c4:00.1
+MODALIAS=pci:v00001002d00001640sv00001002sd00001640bc04sc03i00
+---END file sys/bus/pci/devices/0000:c4:00.1/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.2/uevent---
+DRIVER=ccp
+PCI_CLASS=108000
+PCI_ID=1022:17E0
+PCI_SUBSYS_ID=1022:17E0
+PCI_SLOT_NAME=0000:c4:00.2
+MODALIAS=pci:v00001022d000017E0sv00001022sd000017E0bc10sc80i00
+---END file sys/bus/pci/devices/0000:c4:00.2/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.4/uevent---
+DRIVER=xhci_hcd
+PCI_CLASS=C0330
+PCI_ID=1022:1587
+PCI_SUBSYS_ID=1043:201F
+PCI_SLOT_NAME=0000:c4:00.4
+MODALIAS=pci:v00001022d00001587sv00001043sd0000201Fbc0Csc03i30
+---END file sys/bus/pci/devices/0000:c4:00.4/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.5/uevent---
+DRIVER=snd_acp_pci
+PCI_CLASS=48000
+PCI_ID=1022:15E2
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:c4:00.5
+MODALIAS=pci:v00001022d000015E2sv00001043sd00001FB3bc04sc80i00
+---END file sys/bus/pci/devices/0000:c4:00.5/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.6/uevent---
+DRIVER=snd_hda_intel
+PCI_CLASS=40300
+PCI_ID=1022:15E3
+PCI_SUBSYS_ID=1043:1FB3
+PCI_SLOT_NAME=0000:c4:00.6
+MODALIAS=pci:v00001022d000015E3sv00001043sd00001FB3bc04sc03i00
+---END file sys/bus/pci/devices/0000:c4:00.6/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c4:00.7/uevent---
+DRIVER=pcie_mp2_amd
+PCI_CLASS=118000
+PCI_ID=1022:164A
+PCI_SUBSYS_ID=1022:164A
+PCI_SLOT_NAME=0000:c4:00.7
+MODALIAS=pci:v00001022d0000164Asv00001022sd0000164Abc11sc80i00
+---END file sys/bus/pci/devices/0000:c4:00.7/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c5:00.0/uevent---
+PCI_CLASS=130000
+PCI_ID=1022:150D
+PCI_SUBSYS_ID=1022:150D
+PCI_SLOT_NAME=0000:c5:00.0
+MODALIAS=pci:v00001022d0000150Dsv00001022sd0000150Dbc13sc00i00
+---END file sys/bus/pci/devices/0000:c5:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c5:00.1/uevent---
+DRIVER=amdxdna
+PCI_CLASS=118000
+PCI_ID=1022:17F0
+PCI_SUBSYS_ID=1043:20CF
+PCI_SLOT_NAME=0000:c5:00.1
+MODALIAS=pci:v00001022d000017F0sv00001043sd000020CFbc11sc80i00
+---END file sys/bus/pci/devices/0000:c5:00.1/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c6:00.0/uevent---
+DRIVER=xhci_hcd
+PCI_CLASS=C0330
+PCI_ID=1022:1588
+PCI_SUBSYS_ID=1043:201F
+PCI_SLOT_NAME=0000:c6:00.0
+MODALIAS=pci:v00001022d00001588sv00001043sd0000201Fbc0Csc03i30
+---END file sys/bus/pci/devices/0000:c6:00.0/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c6:00.3/uevent---
+DRIVER=xhci_hcd
+PCI_CLASS=C0330
+PCI_ID=1022:1589
+PCI_SUBSYS_ID=1043:201F
+PCI_SLOT_NAME=0000:c6:00.3
+MODALIAS=pci:v00001022d00001589sv00001043sd0000201Fbc0Csc03i30
+---END file sys/bus/pci/devices/0000:c6:00.3/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c6:00.4/uevent---
+DRIVER=xhci_hcd
+PCI_CLASS=C0330
+PCI_ID=1022:158B
+PCI_SUBSYS_ID=1043:201F
+PCI_SLOT_NAME=0000:c6:00.4
+MODALIAS=pci:v00001022d0000158Bsv00001043sd0000201Fbc0Csc03i30
+---END file sys/bus/pci/devices/0000:c6:00.4/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c6:00.5/uevent---
+DRIVER=thunderbolt
+PCI_CLASS=C0340
+PCI_ID=1022:158D
+PCI_SUBSYS_ID=1043:20AF
+PCI_SLOT_NAME=0000:c6:00.5
+MODALIAS=pci:v00001022d0000158Dsv00001043sd000020AFbc0Csc03i40
+---END file sys/bus/pci/devices/0000:c6:00.5/uevent---
+---BEGIN file sys/bus/pci/devices/0000:c6:00.6/uevent---
+DRIVER=thunderbolt
+PCI_CLASS=C0340
+PCI_ID=1022:158E
+PCI_SUBSYS_ID=1043:20AF
+PCI_SLOT_NAME=0000:c6:00.6
+MODALIAS=pci:v00001022d0000158Esv00001043sd000020AFbc0Csc03i40
+---END file sys/bus/pci/devices/0000:c6:00.6/uevent---
+---BEGIN file sys/bus/pci/drivers/.gitkeep---
+---END file sys/bus/pci/drivers/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/amdgpu/.gitkeep---
+---END file sys/bus/pci/drivers/amdgpu/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/amdxdna/.gitkeep---
+---END file sys/bus/pci/drivers/amdxdna/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/ccp/.gitkeep---
+---END file sys/bus/pci/drivers/ccp/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/k10temp/.gitkeep---
+---END file sys/bus/pci/drivers/k10temp/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/mt7925e/.gitkeep---
+---END file sys/bus/pci/drivers/mt7925e/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/nvme/.gitkeep---
+---END file sys/bus/pci/drivers/nvme/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/pcie_mp2_amd/.gitkeep---
+---END file sys/bus/pci/drivers/pcie_mp2_amd/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/pcieport/.gitkeep---
+---END file sys/bus/pci/drivers/pcieport/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/piix4_smbus/.gitkeep---
+---END file sys/bus/pci/drivers/piix4_smbus/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/sdhci-pci/.gitkeep---
+---END file sys/bus/pci/drivers/sdhci-pci/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/snd_acp_pci/.gitkeep---
+---END file sys/bus/pci/drivers/snd_acp_pci/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/snd_hda_intel/.gitkeep---
+---END file sys/bus/pci/drivers/snd_hda_intel/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/thunderbolt/.gitkeep---
+---END file sys/bus/pci/drivers/thunderbolt/.gitkeep---
+---BEGIN file sys/bus/pci/drivers/xhci_hcd/.gitkeep---
+---END file sys/bus/pci/drivers/xhci_hcd/.gitkeep---
+---BEGIN file sys/bus/spi/devices/.gitkeep---
+---END file sys/bus/spi/devices/.gitkeep---
+---BEGIN file sys/class/dmi/id/bios_version---
+GZ302EA.311
+---END file sys/class/dmi/id/bios_version---
+---BEGIN file sys/class/dmi/id/board_name---
+GZ302EA
+---END file sys/class/dmi/id/board_name---
+---BEGIN file sys/class/dmi/id/chassis_type---
+32
+---END file sys/class/dmi/id/chassis_type---
+---BEGIN file sys/class/dmi/id/product_family---
+ROG Flow Z13
+---END file sys/class/dmi/id/product_family---
+---BEGIN file sys/class/dmi/id/product_name---
+ROG Flow Z13 GZ302EA_GZ302EA
+---END file sys/class/dmi/id/product_name---
+---BEGIN file sys/class/dmi/id/product_version---
+1.0       
+---END file sys/class/dmi/id/product_version---
+---BEGIN file sys/class/dmi/id/sys_vendor---
+ASUSTeK COMPUTER INC.
+---END file sys/class/dmi/id/sys_vendor---
+---BEGIN file sys/class/drm/card1/device/.gitkeep---
+---END file sys/class/drm/card1/device/.gitkeep---
+---BEGIN symlink sys/class/drm/card1/device/driver---
+../../../../bus/pci/drivers/amdgpu
+---END symlink sys/class/drm/card1/device/driver---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/1/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/1/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/1/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/1/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/1/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/1/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/1/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/1/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/108/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/108/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/108/0/major---
+7
+---END file sys/class/drm/card1/device/ip_discovery/die/0/108/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/108/0/minor---
+11
+---END file sys/class/drm/card1/device/ip_discovery/die/0/108/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/108/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/108/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/11/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/11/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/11/0/major---
+11
+---END file sys/class/drm/card1/device/ip_discovery/die/0/11/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/11/0/minor---
+5
+---END file sys/class/drm/card1/device/ip_discovery/die/0/11/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/11/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/11/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/12/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/12/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/12/0/major---
+4
+---END file sys/class/drm/card1/device/ip_discovery/die/0/12/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/12/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/12/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/12/0/revision---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/12/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/14/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/14/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/14/0/major---
+7
+---END file sys/class/drm/card1/device/ip_discovery/die/0/14/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/14/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/14/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/14/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/14/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/150/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/150/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/150/0/major---
+11
+---END file sys/class/drm/card1/device/ip_discovery/die/0/150/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/150/0/minor---
+8
+---END file sys/class/drm/card1/device/ip_discovery/die/0/150/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/150/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/150/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/2/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/2/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/2/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/2/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/2/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/2/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/2/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/2/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/21/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/21/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/21/0/major---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/21/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/21/0/minor---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/21/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/21/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/21/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/255/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/255/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/255/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/255/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/255/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/255/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/255/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/255/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/271/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/271/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/271/0/major---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/271/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/271/0/minor---
+5
+---END file sys/class/drm/card1/device/ip_discovery/die/0/271/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/271/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/271/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/273/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/273/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/273/0/major---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/273/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/273/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/273/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/273/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/273/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/282/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/282/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/282/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/282/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/282/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/282/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/282/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/282/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/286/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/286/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/286/0/major---
+4
+---END file sys/class/drm/card1/device/ip_discovery/die/0/286/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/286/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/286/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/286/0/revision---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/286/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/293/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/293/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/293/0/major---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/293/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/293/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/293/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/293/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/293/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/3/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/3/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/3/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/3/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/3/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/3/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/3/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/3/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/34/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/34/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/34/0/major---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/34/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/34/0/minor---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/34/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/34/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/34/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/35/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/35/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/35/0/major---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/35/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/35/0/minor---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/35/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/35/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/35/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/4/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/4/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/4/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/4/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/4/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/4/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/4/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/4/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/40/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/40/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/40/0/major---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/40/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/40/0/minor---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/40/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/40/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/40/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/41/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/41/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/41/0/major---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/41/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/41/0/minor---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/41/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/41/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/41/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/42/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/42/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/42/0/major---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/42/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/42/0/minor---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/42/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/42/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/42/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/44/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/44/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/44/0/major---
+4
+---END file sys/class/drm/card1/device/ip_discovery/die/0/44/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/44/0/minor---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/44/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/44/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/44/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/45/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/45/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/45/0/major---
+2
+---END file sys/class/drm/card1/device/ip_discovery/die/0/45/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/45/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/45/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/45/0/revision---
+3
+---END file sys/class/drm/card1/device/ip_discovery/die/0/45/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/46/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/46/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/46/0/major---
+4
+---END file sys/class/drm/card1/device/ip_discovery/die/0/46/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/46/0/minor---
+9
+---END file sys/class/drm/card1/device/ip_discovery/die/0/46/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/46/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/46/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/48/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/48/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/48/0/major---
+8
+---END file sys/class/drm/card1/device/ip_discovery/die/0/48/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/48/0/minor---
+7
+---END file sys/class/drm/card1/device/ip_discovery/die/0/48/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/48/0/revision---
+2
+---END file sys/class/drm/card1/device/ip_discovery/die/0/48/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/5/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/5/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/5/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/5/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/5/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/5/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/5/0/revision---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/5/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/6/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/6/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/6/0/major---
+14
+---END file sys/class/drm/card1/device/ip_discovery/die/0/6/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/6/0/minor---
+0
+---END file sys/class/drm/card1/device/ip_discovery/die/0/6/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/6/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/6/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/70/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/70/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/70/0/major---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/70/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/70/0/minor---
+7
+---END file sys/class/drm/card1/device/ip_discovery/die/0/70/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/70/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/70/0/revision---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/91/0/.gitkeep---
+---END file sys/class/drm/card1/device/ip_discovery/die/0/91/0/.gitkeep---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/91/0/major---
+6
+---END file sys/class/drm/card1/device/ip_discovery/die/0/91/0/major---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/91/0/minor---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/91/0/minor---
+---BEGIN file sys/class/drm/card1/device/ip_discovery/die/0/91/0/revision---
+1
+---END file sys/class/drm/card1/device/ip_discovery/die/0/91/0/revision---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/ACP---
+14
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/ACP---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/ATHUB---
+35
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/ATHUB---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/CLKA---
+6
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/CLKA---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/DBGU_IO---
+45
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/DBGU_IO---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/DF---
+46
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/DF---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/DMU---
+271
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/DMU---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/FCH---
+48
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/FCH---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/FUSE---
+5
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/FUSE---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/GC---
+11
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/GC---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/HDP---
+41
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/HDP---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/ISP---
+44
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/ISP---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/LSDMA---
+91
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/LSDMA---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/MMHUB---
+34
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/MMHUB---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/MP0---
+255
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/MP0---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/MP1---
+1
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/MP1---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/MP2---
+2
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/MP2---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/NBIF---
+108
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/NBIF---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/OSSSYS---
+40
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/OSSSYS---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/PCIE---
+70
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/PCIE---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/SDMA0---
+42
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/SDMA0---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/SMUIO---
+4
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/SMUIO---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/THM---
+3
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/THM---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/UMC---
+150
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/UMC---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/UVD---
+12
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/UVD---
+---BEGIN symlink sys/class/drm/card1/device/ip_discovery/die/0/VPE---
+21
+---END symlink sys/class/drm/card1/device/ip_discovery/die/0/VPE---
+---BEGIN file sys/class/firmware-attributes/asus-armoury/.gitkeep---
+---END file sys/class/firmware-attributes/asus-armoury/.gitkeep---
+---BEGIN file sys/class/input/event0/uevent---
+MAJOR=13
+MINOR=64
+DEVNAME=input/event0
+---END file sys/class/input/event0/uevent---
+---BEGIN file sys/class/input/event1/uevent---
+MAJOR=13
+MINOR=65
+DEVNAME=input/event1
+---END file sys/class/input/event1/uevent---
+---BEGIN file sys/class/input/event10/uevent---
+MAJOR=13
+MINOR=74
+DEVNAME=input/event10
+---END file sys/class/input/event10/uevent---
+---BEGIN file sys/class/input/event11/uevent---
+MAJOR=13
+MINOR=75
+DEVNAME=input/event11
+---END file sys/class/input/event11/uevent---
+---BEGIN file sys/class/input/event12/uevent---
+MAJOR=13
+MINOR=76
+DEVNAME=input/event12
+---END file sys/class/input/event12/uevent---
+---BEGIN file sys/class/input/event13/uevent---
+MAJOR=13
+MINOR=77
+DEVNAME=input/event13
+---END file sys/class/input/event13/uevent---
+---BEGIN file sys/class/input/event14/uevent---
+MAJOR=13
+MINOR=78
+DEVNAME=input/event14
+---END file sys/class/input/event14/uevent---
+---BEGIN file sys/class/input/event15/uevent---
+MAJOR=13
+MINOR=79
+DEVNAME=input/event15
+---END file sys/class/input/event15/uevent---
+---BEGIN file sys/class/input/event16/uevent---
+MAJOR=13
+MINOR=80
+DEVNAME=input/event16
+---END file sys/class/input/event16/uevent---
+---BEGIN file sys/class/input/event17/uevent---
+MAJOR=13
+MINOR=81
+DEVNAME=input/event17
+---END file sys/class/input/event17/uevent---
+---BEGIN file sys/class/input/event18/uevent---
+MAJOR=13
+MINOR=82
+DEVNAME=input/event18
+---END file sys/class/input/event18/uevent---
+---BEGIN file sys/class/input/event19/uevent---
+MAJOR=13
+MINOR=83
+DEVNAME=input/event19
+---END file sys/class/input/event19/uevent---
+---BEGIN file sys/class/input/event2/uevent---
+MAJOR=13
+MINOR=66
+DEVNAME=input/event2
+---END file sys/class/input/event2/uevent---
+---BEGIN file sys/class/input/event20/uevent---
+MAJOR=13
+MINOR=84
+DEVNAME=input/event20
+---END file sys/class/input/event20/uevent---
+---BEGIN file sys/class/input/event21/uevent---
+MAJOR=13
+MINOR=85
+DEVNAME=input/event21
+---END file sys/class/input/event21/uevent---
+---BEGIN file sys/class/input/event22/uevent---
+MAJOR=13
+MINOR=86
+DEVNAME=input/event22
+---END file sys/class/input/event22/uevent---
+---BEGIN file sys/class/input/event23/uevent---
+MAJOR=13
+MINOR=87
+DEVNAME=input/event23
+---END file sys/class/input/event23/uevent---
+---BEGIN file sys/class/input/event3/uevent---
+MAJOR=13
+MINOR=67
+DEVNAME=input/event3
+---END file sys/class/input/event3/uevent---
+---BEGIN file sys/class/input/event4/uevent---
+MAJOR=13
+MINOR=68
+DEVNAME=input/event4
+---END file sys/class/input/event4/uevent---
+---BEGIN file sys/class/input/event5/uevent---
+MAJOR=13
+MINOR=69
+DEVNAME=input/event5
+---END file sys/class/input/event5/uevent---
+---BEGIN file sys/class/input/event6/uevent---
+MAJOR=13
+MINOR=70
+DEVNAME=input/event6
+---END file sys/class/input/event6/uevent---
+---BEGIN file sys/class/input/event7/uevent---
+MAJOR=13
+MINOR=71
+DEVNAME=input/event7
+---END file sys/class/input/event7/uevent---
+---BEGIN file sys/class/input/event8/uevent---
+MAJOR=13
+MINOR=72
+DEVNAME=input/event8
+---END file sys/class/input/event8/uevent---
+---BEGIN file sys/class/input/event9/uevent---
+MAJOR=13
+MINOR=73
+DEVNAME=input/event9
+---END file sys/class/input/event9/uevent---
+---BEGIN file sys/class/sound/card0/id---
+Generic
+---END file sys/class/sound/card0/id---
+---BEGIN file sys/class/sound/card1/id---
+Generic_1
+---END file sys/class/sound/card1/id---
+---BEGIN file sys/module/amdgpu/.gitkeep---
+---END file sys/module/amdgpu/.gitkeep---
+---BEGIN file sys/module/amdgpu/initstate---
+live
+---END file sys/module/amdgpu/initstate---
+---BEGIN file sys/module/amdgpu/parameters/.gitkeep---
+---END file sys/module/amdgpu/parameters/.gitkeep---
+---BEGIN file sys/module/amdgpu/parameters/abmlevel---
+0
+---END file sys/module/amdgpu/parameters/abmlevel---
+---BEGIN file sys/module/amdgpu/parameters/agp---
+-1
+---END file sys/module/amdgpu/parameters/agp---
+---BEGIN file sys/module/amdgpu/parameters/aspm---
+-1
+---END file sys/module/amdgpu/parameters/aspm---
+---BEGIN file sys/module/amdgpu/parameters/async_gfx_ring---
+1
+---END file sys/module/amdgpu/parameters/async_gfx_ring---
+---BEGIN file sys/module/amdgpu/parameters/audio---
+-1
+---END file sys/module/amdgpu/parameters/audio---
+---BEGIN file sys/module/amdgpu/parameters/backlight---
+-1
+---END file sys/module/amdgpu/parameters/backlight---
+---BEGIN file sys/module/amdgpu/parameters/bad_page_threshold---
+-1
+---END file sys/module/amdgpu/parameters/bad_page_threshold---
+---BEGIN file sys/module/amdgpu/parameters/bapm---
+-1
+---END file sys/module/amdgpu/parameters/bapm---
+---BEGIN file sys/module/amdgpu/parameters/cg_mask---
+18446744073709551615
+---END file sys/module/amdgpu/parameters/cg_mask---
+---BEGIN file sys/module/amdgpu/parameters/cik_support---
+-1
+---END file sys/module/amdgpu/parameters/cik_support---
+---BEGIN file sys/module/amdgpu/parameters/compute_multipipe---
+-1
+---END file sys/module/amdgpu/parameters/compute_multipipe---
+---BEGIN file sys/module/amdgpu/parameters/cwsr_enable---
+0
+---END file sys/module/amdgpu/parameters/cwsr_enable---
+---BEGIN file sys/module/amdgpu/parameters/damageclips---
+-1
+---END file sys/module/amdgpu/parameters/damageclips---
+---BEGIN file sys/module/amdgpu/parameters/dc---
+-1
+---END file sys/module/amdgpu/parameters/dc---
+---BEGIN file sys/module/amdgpu/parameters/dcdebugmask---
+1536
+---END file sys/module/amdgpu/parameters/dcdebugmask---
+---BEGIN file sys/module/amdgpu/parameters/dcfeaturemask---
+1026
+---END file sys/module/amdgpu/parameters/dcfeaturemask---
+---BEGIN file sys/module/amdgpu/parameters/debug_evictions---
+N
+---END file sys/module/amdgpu/parameters/debug_evictions---
+---BEGIN file sys/module/amdgpu/parameters/debug_mask---
+0
+---END file sys/module/amdgpu/parameters/debug_mask---
+---BEGIN file sys/module/amdgpu/parameters/deep_color---
+0
+---END file sys/module/amdgpu/parameters/deep_color---
+---BEGIN file sys/module/amdgpu/parameters/disable_cu---
+(null)
+---END file sys/module/amdgpu/parameters/disable_cu---
+---BEGIN file sys/module/amdgpu/parameters/discovery---
+-1
+---END file sys/module/amdgpu/parameters/discovery---
+---BEGIN file sys/module/amdgpu/parameters/disp_priority---
+0
+---END file sys/module/amdgpu/parameters/disp_priority---
+---BEGIN file sys/module/amdgpu/parameters/dpm---
+-1
+---END file sys/module/amdgpu/parameters/dpm---
+---BEGIN file sys/module/amdgpu/parameters/emu_mode---
+0
+---END file sys/module/amdgpu/parameters/emu_mode---
+---BEGIN file sys/module/amdgpu/parameters/enforce_isolation---
+-1
+---END file sys/module/amdgpu/parameters/enforce_isolation---
+---BEGIN file sys/module/amdgpu/parameters/exp_hw_support---
+0
+---END file sys/module/amdgpu/parameters/exp_hw_support---
+---BEGIN file sys/module/amdgpu/parameters/force_asic_type---
+-1
+---END file sys/module/amdgpu/parameters/force_asic_type---
+---BEGIN file sys/module/amdgpu/parameters/forcelongtraining---
+0
+---END file sys/module/amdgpu/parameters/forcelongtraining---
+---BEGIN file sys/module/amdgpu/parameters/freesync_video---
+0
+---END file sys/module/amdgpu/parameters/freesync_video---
+---BEGIN file sys/module/amdgpu/parameters/fw_load_type---
+-1
+---END file sys/module/amdgpu/parameters/fw_load_type---
+---BEGIN file sys/module/amdgpu/parameters/gpu_recovery---
+-1
+---END file sys/module/amdgpu/parameters/gpu_recovery---
+---BEGIN file sys/module/amdgpu/parameters/halt_if_hws_hang---
+0
+---END file sys/module/amdgpu/parameters/halt_if_hws_hang---
+---BEGIN file sys/module/amdgpu/parameters/hdmi_hpd_debounce_delay_ms---
+0
+---END file sys/module/amdgpu/parameters/hdmi_hpd_debounce_delay_ms---
+---BEGIN file sys/module/amdgpu/parameters/hw_i2c---
+0
+---END file sys/module/amdgpu/parameters/hw_i2c---
+---BEGIN file sys/module/amdgpu/parameters/hws_gws_support---
+N
+---END file sys/module/amdgpu/parameters/hws_gws_support---
+---BEGIN file sys/module/amdgpu/parameters/hws_max_conc_proc---
+-1
+---END file sys/module/amdgpu/parameters/hws_max_conc_proc---
+---BEGIN file sys/module/amdgpu/parameters/ip_block_mask---
+4294967295
+---END file sys/module/amdgpu/parameters/ip_block_mask---
+---BEGIN file sys/module/amdgpu/parameters/lbpw---
+-1
+---END file sys/module/amdgpu/parameters/lbpw---
+---BEGIN file sys/module/amdgpu/parameters/lockup_timeout---
+---END file sys/module/amdgpu/parameters/lockup_timeout---
+---BEGIN file sys/module/amdgpu/parameters/max_num_of_queues_per_device---
+4096
+---END file sys/module/amdgpu/parameters/max_num_of_queues_per_device---
+---BEGIN file sys/module/amdgpu/parameters/mcbp---
+-1
+---END file sys/module/amdgpu/parameters/mcbp---
+---BEGIN file sys/module/amdgpu/parameters/mes_log_enable---
+0
+---END file sys/module/amdgpu/parameters/mes_log_enable---
+---BEGIN file sys/module/amdgpu/parameters/modeset---
+-1
+---END file sys/module/amdgpu/parameters/modeset---
+---BEGIN file sys/module/amdgpu/parameters/msi---
+-1
+---END file sys/module/amdgpu/parameters/msi---
+---BEGIN file sys/module/amdgpu/parameters/mtype_local---
+-1
+---END file sys/module/amdgpu/parameters/mtype_local---
+---BEGIN file sys/module/amdgpu/parameters/no_queue_eviction_on_vm_fault---
+0
+---END file sys/module/amdgpu/parameters/no_queue_eviction_on_vm_fault---
+---BEGIN file sys/module/amdgpu/parameters/no_system_mem_limit---
+N
+---END file sys/module/amdgpu/parameters/no_system_mem_limit---
+---BEGIN file sys/module/amdgpu/parameters/noretry---
+-1
+---END file sys/module/amdgpu/parameters/noretry---
+---BEGIN file sys/module/amdgpu/parameters/num_kcq---
+-1
+---END file sys/module/amdgpu/parameters/num_kcq---
+---BEGIN file sys/module/amdgpu/parameters/pcie_gen2---
+-1
+---END file sys/module/amdgpu/parameters/pcie_gen2---
+---BEGIN file sys/module/amdgpu/parameters/pcie_gen_cap---
+0
+---END file sys/module/amdgpu/parameters/pcie_gen_cap---
+---BEGIN file sys/module/amdgpu/parameters/pcie_lane_cap---
+0
+---END file sys/module/amdgpu/parameters/pcie_lane_cap---
+---BEGIN file sys/module/amdgpu/parameters/pcie_p2p---
+Y
+---END file sys/module/amdgpu/parameters/pcie_p2p---
+---BEGIN file sys/module/amdgpu/parameters/pg_mask---
+4294967295
+---END file sys/module/amdgpu/parameters/pg_mask---
+---BEGIN file sys/module/amdgpu/parameters/ppfeaturemask---
+0xffff7fff
+---END file sys/module/amdgpu/parameters/ppfeaturemask---
+---BEGIN file sys/module/amdgpu/parameters/ptl---
+-1
+---END file sys/module/amdgpu/parameters/ptl---
+---BEGIN file sys/module/amdgpu/parameters/queue_preemption_timeout_ms---
+9000
+---END file sys/module/amdgpu/parameters/queue_preemption_timeout_ms---
+---BEGIN file sys/module/amdgpu/parameters/ras_enable---
+-1
+---END file sys/module/amdgpu/parameters/ras_enable---
+---BEGIN file sys/module/amdgpu/parameters/ras_mask---
+4294967295
+---END file sys/module/amdgpu/parameters/ras_mask---
+---BEGIN file sys/module/amdgpu/parameters/rebar---
+-1
+---END file sys/module/amdgpu/parameters/rebar---
+---BEGIN file sys/module/amdgpu/parameters/reset_method---
+-1
+---END file sys/module/amdgpu/parameters/reset_method---
+---BEGIN file sys/module/amdgpu/parameters/runpm---
+-1
+---END file sys/module/amdgpu/parameters/runpm---
+---BEGIN file sys/module/amdgpu/parameters/sched_hw_submission---
+2
+---END file sys/module/amdgpu/parameters/sched_hw_submission---
+---BEGIN file sys/module/amdgpu/parameters/sched_jobs---
+32
+---END file sys/module/amdgpu/parameters/sched_jobs---
+---BEGIN file sys/module/amdgpu/parameters/sched_policy---
+0
+---END file sys/module/amdgpu/parameters/sched_policy---
+---BEGIN file sys/module/amdgpu/parameters/sdma_phase_quantum---
+32
+---END file sys/module/amdgpu/parameters/sdma_phase_quantum---
+---BEGIN file sys/module/amdgpu/parameters/seamless---
+-1
+---END file sys/module/amdgpu/parameters/seamless---
+---BEGIN file sys/module/amdgpu/parameters/send_sigterm---
+0
+---END file sys/module/amdgpu/parameters/send_sigterm---
+---BEGIN file sys/module/amdgpu/parameters/sg_display---
+0
+---END file sys/module/amdgpu/parameters/sg_display---
+---BEGIN file sys/module/amdgpu/parameters/si_support---
+-1
+---END file sys/module/amdgpu/parameters/si_support---
+---BEGIN file sys/module/amdgpu/parameters/smu_memory_pool_size---
+0
+---END file sys/module/amdgpu/parameters/smu_memory_pool_size---
+---BEGIN file sys/module/amdgpu/parameters/smu_pptable_id---
+-1
+---END file sys/module/amdgpu/parameters/smu_pptable_id---
+---BEGIN file sys/module/amdgpu/parameters/svm_default_granularity---
+9
+---END file sys/module/amdgpu/parameters/svm_default_granularity---
+---BEGIN file sys/module/amdgpu/parameters/timeout_fatal_disable---
+N
+---END file sys/module/amdgpu/parameters/timeout_fatal_disable---
+---BEGIN file sys/module/amdgpu/parameters/timeout_period---
+0
+---END file sys/module/amdgpu/parameters/timeout_period---
+---BEGIN file sys/module/amdgpu/parameters/tmz---
+-1
+---END file sys/module/amdgpu/parameters/tmz---
+---BEGIN file sys/module/amdgpu/parameters/umsch_mm---
+0
+---END file sys/module/amdgpu/parameters/umsch_mm---
+---BEGIN file sys/module/amdgpu/parameters/umsch_mm_fwlog---
+0
+---END file sys/module/amdgpu/parameters/umsch_mm_fwlog---
+---BEGIN file sys/module/amdgpu/parameters/uni_mes---
+1
+---END file sys/module/amdgpu/parameters/uni_mes---
+---BEGIN file sys/module/amdgpu/parameters/use_xgmi_p2p---
+1
+---END file sys/module/amdgpu/parameters/use_xgmi_p2p---
+---BEGIN file sys/module/amdgpu/parameters/user_partt_mode---
+4294967294
+---END file sys/module/amdgpu/parameters/user_partt_mode---
+---BEGIN file sys/module/amdgpu/parameters/user_queue---
+-1
+---END file sys/module/amdgpu/parameters/user_queue---
+---BEGIN file sys/module/amdgpu/parameters/vcnfw_log---
+0
+---END file sys/module/amdgpu/parameters/vcnfw_log---
+---BEGIN file sys/module/amdgpu/parameters/virtual_display---
+(null)
+---END file sys/module/amdgpu/parameters/virtual_display---
+---BEGIN file sys/module/amdgpu/parameters/vis_vramlimit---
+0
+---END file sys/module/amdgpu/parameters/vis_vramlimit---
+---BEGIN file sys/module/amdgpu/parameters/visualconfirm---
+0
+---END file sys/module/amdgpu/parameters/visualconfirm---
+---BEGIN file sys/module/amdgpu/parameters/vm_block_size---
+-1
+---END file sys/module/amdgpu/parameters/vm_block_size---
+---BEGIN file sys/module/amdgpu/parameters/vm_fault_stop---
+0
+---END file sys/module/amdgpu/parameters/vm_fault_stop---
+---BEGIN file sys/module/amdgpu/parameters/vm_fragment_size---
+-1
+---END file sys/module/amdgpu/parameters/vm_fragment_size---
+---BEGIN file sys/module/amdgpu/parameters/vm_size---
+-1
+---END file sys/module/amdgpu/parameters/vm_size---
+---BEGIN file sys/module/amdgpu/parameters/vm_update_mode---
+-1
+---END file sys/module/amdgpu/parameters/vm_update_mode---
+---BEGIN file sys/module/amdgpu/parameters/wbrf---
+-1
+---END file sys/module/amdgpu/parameters/wbrf---
+---BEGIN file sys/module/asus_wmi/.gitkeep---
+---END file sys/module/asus_wmi/.gitkeep---
+---BEGIN file sys/module/asus_wmi/initstate---
+live
+---END file sys/module/asus_wmi/initstate---
+---BEGIN file sys/module/asus_wmi/parameters/.gitkeep---
+---END file sys/module/asus_wmi/parameters/.gitkeep---
+---BEGIN file sys/module/asus_wmi/parameters/fnlock_default---
+Y
+---END file sys/module/asus_wmi/parameters/fnlock_default---
+---BEGIN file sys/module/hid_asus/.gitkeep---
+---END file sys/module/hid_asus/.gitkeep---
+---BEGIN file sys/module/hid_asus/initstate---
+live
+---END file sys/module/hid_asus/initstate---
+---BEGIN file sys/module/i2c_hid_acpi/.gitkeep---
+---END file sys/module/i2c_hid_acpi/.gitkeep---
+---BEGIN file sys/module/i2c_hid_acpi/initstate---
+live
+---END file sys/module/i2c_hid_acpi/initstate---
+---BEGIN file sys/module/mt7925e/.gitkeep---
+---END file sys/module/mt7925e/.gitkeep---
+---BEGIN file sys/module/mt7925e/initstate---
+live
+---END file sys/module/mt7925e/initstate---
+---BEGIN file sys/module/mt7925e/parameters/.gitkeep---
+---END file sys/module/mt7925e/parameters/.gitkeep---
+---BEGIN file sys/module/mt7925e/parameters/disable_aspm---
+N
+---END file sys/module/mt7925e/parameters/disable_aspm---
+---BEGIN file sys/module/snd_hda_intel/.gitkeep---
+---END file sys/module/snd_hda_intel/.gitkeep---
+---BEGIN file sys/module/snd_hda_intel/initstate---
+live
+---END file sys/module/snd_hda_intel/initstate---
+---BEGIN file sys/module/snd_hda_intel/parameters/.gitkeep---
+---END file sys/module/snd_hda_intel/parameters/.gitkeep---
+---BEGIN file sys/module/snd_hda_intel/parameters/align_buffer_size---
+-1
+---END file sys/module/snd_hda_intel/parameters/align_buffer_size---
+---BEGIN file sys/module/snd_hda_intel/parameters/bdl_pos_adj---
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+---END file sys/module/snd_hda_intel/parameters/bdl_pos_adj---
+---BEGIN file sys/module/snd_hda_intel/parameters/beep_mode---
+N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N,N
+---END file sys/module/snd_hda_intel/parameters/beep_mode---
+---BEGIN file sys/module/snd_hda_intel/parameters/ctl_dev_id---
+N
+---END file sys/module/snd_hda_intel/parameters/ctl_dev_id---
+---BEGIN file sys/module/snd_hda_intel/parameters/dmic_detect---
+Y
+---END file sys/module/snd_hda_intel/parameters/dmic_detect---
+---BEGIN file sys/module/snd_hda_intel/parameters/enable---
+Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y,Y
+---END file sys/module/snd_hda_intel/parameters/enable---
+---BEGIN file sys/module/snd_hda_intel/parameters/enable_msi---
+-1
+---END file sys/module/snd_hda_intel/parameters/enable_msi---
+---BEGIN file sys/module/snd_hda_intel/parameters/id---
+(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null)
+---END file sys/module/snd_hda_intel/parameters/id---
+---BEGIN file sys/module/snd_hda_intel/parameters/index---
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+---END file sys/module/snd_hda_intel/parameters/index---
+---BEGIN file sys/module/snd_hda_intel/parameters/jackpoll_ms---
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+---END file sys/module/snd_hda_intel/parameters/jackpoll_ms---
+---BEGIN file sys/module/snd_hda_intel/parameters/model---
+(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null)
+---END file sys/module/snd_hda_intel/parameters/model---
+---BEGIN file sys/module/snd_hda_intel/parameters/patch---
+(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null),(null)
+---END file sys/module/snd_hda_intel/parameters/patch---
+---BEGIN file sys/module/snd_hda_intel/parameters/pm_blacklist---
+-1
+---END file sys/module/snd_hda_intel/parameters/pm_blacklist---
+---BEGIN file sys/module/snd_hda_intel/parameters/position_fix---
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+---END file sys/module/snd_hda_intel/parameters/position_fix---
+---BEGIN file sys/module/snd_hda_intel/parameters/power_save---
+0
+---END file sys/module/snd_hda_intel/parameters/power_save---
+---BEGIN file sys/module/snd_hda_intel/parameters/power_save_controller---
+Y
+---END file sys/module/snd_hda_intel/parameters/power_save_controller---
+---BEGIN file sys/module/snd_hda_intel/parameters/probe_mask---
+-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+---END file sys/module/snd_hda_intel/parameters/probe_mask---
+---BEGIN file sys/module/snd_hda_intel/parameters/probe_only---
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+---END file sys/module/snd_hda_intel/parameters/probe_only---
+---BEGIN file sys/module/snd_hda_intel/parameters/single_cmd---
+-1
+---END file sys/module/snd_hda_intel/parameters/single_cmd---
+---BEGIN file sys/module/snd_hda_intel/parameters/snoop---
+-1
+---END file sys/module/snd_hda_intel/parameters/snoop---
+---BEGIN file sys/module/snd_hda_scodec_cs35l41_i2c/.gitkeep---
+---END file sys/module/snd_hda_scodec_cs35l41_i2c/.gitkeep---
+---BEGIN file sys/module/snd_hda_scodec_cs35l41_i2c/initstate---
+live
+---END file sys/module/snd_hda_scodec_cs35l41_i2c/initstate---
+---BEGIN file sys/module/snd_hda_scodec_cs35l41_spi/.gitkeep---
+---END file sys/module/snd_hda_scodec_cs35l41_spi/.gitkeep---
+---BEGIN file sys/module/snd_hda_scodec_cs35l41_spi/initstate---
+live
+---END file sys/module/snd_hda_scodec_cs35l41_spi/initstate---

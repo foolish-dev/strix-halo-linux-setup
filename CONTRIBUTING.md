@@ -151,7 +151,46 @@ git diff -- README.md strix-halo-setup.sh docs/technical/external-integrations-c
 bash tests/validate-version-sync.sh
 ```
 
-### 7. Distribution Testing
+### 7. Verification Layer
+
+**Required when touching `strix-halo-lib/verify-manager.sh`, `strix-halo-lib/probe-source.sh`, or any `*_status()` resolver:**
+```bash
+bash tests/verify-layer.sh
+```
+
+This covers the six `VERIFY_*` codes, the primitives that prove a fix from live
+kernel state, and the false-alarm invariant that keeps a writable parameter
+someone else changed from being reported as `REJECTED`. It needs no root and
+touches no hardware.
+
+### 8. Device Fixtures
+
+**Required when touching `strix-halo-lib/fixture-format.sh`, the capture script, or any committed fixture:**
+```bash
+bash tests/device-fixture-replay.sh
+bash tests/fixture-sanitization-lint.sh tests/fixtures
+```
+
+`device-fixture-replay.sh` replays every committed fixture through the **real,
+unmodified** detection code — it contains no function overrides, which is
+deliberate: `tests/device-manager-detection.sh` overrides `_lspci_has`, and that
+is exactly why a SIGPIPE bug inside `_lspci_has` once survived 85 green
+assertions. `fixture-sanitization-lint.sh` re-reads every byte of every fixture
+looking for serials, MACs and filesystem UUIDs that the capture-time scrubber
+should have removed.
+
+### 9. Report Redaction
+
+**Required when touching `strix-halo-lib/report-manager.sh` or `scripts/fixture-scrub.sed`:**
+```bash
+bash tests/report-redaction.sh
+```
+
+Proves that `--report` strips identifying data from the bundle it writes, and
+that its redactors do not corrupt the hardware strings detection depends on
+(PCI ids, USB ids, PCI addresses, ALSA component strings).
+
+### 10. Distribution Testing
 
 **Strongly recommended:**
 Test your changes on all supported distributions:
@@ -171,6 +210,9 @@ You can use virtual machines or containers for testing.
    - Run shellcheck: `shellcheck script.sh`
     - Run device-profile regression checks when touching `strix-halo-lib/device-manager.sh`: `bash tests/device-manager-detection.sh`
     - Run detection-pipeline robustness checks when touching any detection helper: `bash tests/detection-pipeline-robustness.sh`
+    - Run verification-layer checks when touching a `*_status()` resolver, `verify-manager.sh` or `probe-source.sh`: `bash tests/verify-layer.sh`
+    - Run fixture replay and the sanitization lint when touching fixtures or `fixture-format.sh`: `bash tests/device-fixture-replay.sh` and `bash tests/fixture-sanitization-lint.sh tests/fixtures`
+    - Run report-redaction checks when touching `report-manager.sh` or `scripts/fixture-scrub.sed`: `bash tests/report-redaction.sh`
     - Run generated-content sync when changing supported devices: `bash scripts/sync-device-matrix.sh`
     - Run version validation: `bash tests/validate-version-sync.sh`
    - Test on target hardware or VM if possible
@@ -187,6 +229,94 @@ You can use virtual machines or containers for testing.
    - Clear description of changes
    - Testing details (which distributions you tested)
    - Any known limitations or issues
+
+## 🧩 Contributing a Device Fixture
+
+A **device fixture** is a redacted snapshot of one machine's detection-relevant
+state, checked into `tests/fixtures/<device-key>/`. Replaying one lets the real
+bodies of the detection helpers run against real hardware data in CI, forever.
+
+Only the ASUS GZ302 has ever been verified on physical hardware. The other ten
+device profiles are DMI string matches written from spec sheets, so a fixture
+from any of them is the first evidence anyone has that those profiles work.
+
+The workflow, in full: [docs/contributing-a-device-fixture.md](docs/contributing-a-device-fixture.md).
+In short:
+
+1. **Capture** — `./scripts/capture-device-fixture.sh`
+   No root. Modifies nothing. Never calls `modprobe`, never touches a unit or a
+   package manager, and writes only `tests/fixtures/<key>/` and its packed
+   sibling `tests/fixtures/<key>.fixture`. Before reporting success it runs
+   detection twice — against the new fixture and live — and refuses the capture
+   if the two disagree.
+2. **Lint** — `bash tests/fixture-sanitization-lint.sh tests/fixtures`
+   The independent proof that the capture-time scrubber ran. A contributor's
+   scrubber can be skipped; CI's cannot.
+3. **Replay** — `bash tests/device-fixture-replay.sh`
+   The test CI will run.
+4. **Read `tests/fixtures/<key>/expected` and report what is wrong** — then open
+   a PR titled `fixture: <device>`, listing any line you believe is incorrect.
+
+**A failing first fixture is the feature working.** `expected` records what that
+machine's detection *actually produced*, not what is correct. If it says
+`CAP_CS35L41=false` and the machine has Cirrus amplifiers, that is a bug in this
+repository — say so in the PR and leave it failing. Editing `expected` to make
+the replay pass converts a detection bug into a permanently asserted regression
+test, and the next person to fix it will see CI go red and assume they broke
+something.
+
+### The two ways a fixture fails
+
+`tests/device-fixture-replay.sh` sorts every failure into one of two classes and
+counts them separately, because they call for opposite responses:
+
+```
+Assertions failed: 3
+  0 malformed-fixture fault(s)   — the FIXTURE gets fixed
+  3 profile contradiction(s)     — the PROFILE RECORD is probably wrong
+```
+
+**Malformed fixture** — a missing capture, an unreadable `meta`, a key the
+replay cannot produce. Contributor error; recapture.
+
+**Profile contradiction** — the capture is well formed and
+`STRIX_HALO_KNOWN_DEVICE_PROFILES` is what disagrees with it. Report it; do not
+silence it. It is deliberately not silenceable by editing the fixture: one check
+compares the device matrix against the fixture's raw DMI and SMBIOS evidence and
+never opens `expected`, and a second compares it against the values `expected`
+recorded — so editing `expected` to make a replay assertion go green trips the
+second check instead.
+
+Resolving a contradiction requires an explicit annotation in
+`tests/fixtures/<key>.profile-corrections`, one `FIELD|profile_value|hardware_value|why`
+line per field, which the test validates against what `device-profile-data.sh`
+says today. Changing a profile record to match real hardware is therefore a
+deliberate, visible act in the diff rather than a quiet edit — and the
+annotation goes stale, loudly, the moment the record is actually fixed.
+
+### `expected` also asserts the verification layer
+
+`tests/fixtures/<key>/expected` carries `# verify <component>.<fn>=<STATUS>`
+lines beside the ordinary `KEY=value` ones — the tri-state verdict
+`--verify` would print for every registered fix on that machine. They are
+comment-prefixed for backward compatibility only; the replay test asserts every
+one of them. A `# verify` row that moves from `LIVE` to `REJECTED` across a
+kernel bump is the single most interesting line a recapture diff can contain.
+
+Fixture directory names are column 1 of `STRIX_HALO_KNOWN_DEVICE_PROFILES` in
+`strix-halo-lib/device-profile-data.sh`, which is what keeps fixtures and the
+device matrix from drifting apart. A packed fixture must use the `.fixture`
+extension and never `.sh` — CI globs `find . -name '*.sh'` and would try to parse
+it as shell.
+
+If you would rather not clone the repo, run `./strix-halo-setup.sh --report` and
+attach the bundle; a maintainer extracts the fixture from it with
+`scripts/extract-fixture.sh`.
+
+**Maintainers:** [docs/contributing-a-device-fixture.md](docs/contributing-a-device-fixture.md)
+opens with a ready-to-post **CALL FOR FIXTURES** — a few paragraphs, between
+paste markers, to drop into a GitHub issue or Discussion asking owners of the
+ten unverified devices for a capture.
 
 ## 📦 Module Development
 
@@ -270,13 +400,23 @@ install_module "$1"
 
 ## 🐛 Bug Reports
 
-When reporting bugs, please include:
+Start here:
 
-1. **Distribution and version**: `cat /etc/os-release`
-2. **Hardware info**: `lscpu`, `lspci` output
+```bash
+./strix-halo-setup.sh --report      # no sudo needed
+```
+
+Attach the resulting `.md` and `.fixture` files to the issue. The bundle already
+carries the distribution, kernel, hardware inventory, detected device profile and
+a tri-state verification of every applied fix, with serials, MACs, filesystem
+UUIDs, SSIDs, hostname and username removed and re-scanned for. See
+[docs/diagnostic-report.md](docs/diagnostic-report.md).
+
+Then add, in your own words:
+
+1. **Steps to reproduce**: Exact commands you ran
+2. **Expected vs actual behavior**: What should happen vs what happened
 3. **Error messages**: Complete error output
-4. **Steps to reproduce**: Exact commands you ran
-5. **Expected vs actual behavior**: What should happen vs what happened
 
 ## 💡 Feature Requests
 
@@ -388,6 +528,9 @@ When updating documentation:
 - [ ] Code passes `bash -n` syntax check
 - [ ] Code passes `shellcheck` with zero warnings
 - [ ] `bash tests/detection-pipeline-robustness.sh` passes (detection helpers)
+- [ ] `bash tests/verify-layer.sh` passes (verification layer)
+- [ ] `bash tests/device-fixture-replay.sh` and `bash tests/fixture-sanitization-lint.sh tests/fixtures` pass (fixtures)
+- [ ] `bash tests/report-redaction.sh` passes (diagnostic bundle)
 - [ ] `bash tests/validate-version-sync.sh` passes
 - [ ] Changes tested on at least one supported distribution
 - [ ] All 4 distributions have equivalent implementation
